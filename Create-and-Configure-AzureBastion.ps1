@@ -31,7 +31,7 @@ Disclaimer:     This script is provided "As Is" with no warranties.
 
 .LINK
 
-https://wmatthyssen.com/2021/06/02/azure-bastion-azure-powershell-deployment-script/
+https://wmatthyssen.com/2022/01/14/azure-bastion-azure-powershell-deployment-script/
 #>
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
