@@ -21,7 +21,7 @@ Created:        01/06/2021
 Last modified:  10/04/2022
 Author:         Wim Matthyssen
 PowerShell:     Azure Cloud Shell or Azure PowerShell
-Version:        Install latest Azure Powershell modules (at least Az version 5.9.0 and Az.Network version 4.7.0 is required)
+Version:        Install latest Azure PowerShell modules (at least Az version 5.9.0 and Az.Network version 4.7.0 is required)
 Action:         Change variables were needed to fit your needs. 
 Disclaimer:     This script is provided "As Is" with no warranties.
 
