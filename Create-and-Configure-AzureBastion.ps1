@@ -31,7 +31,7 @@ Disclaimer:     This script is provided "As Is" with no warranties.
 
 .LINK
 
-https://wmatthyssen.com/2022/01/14/azure-bastion-azure-powershell-deployment-script/
+https://wmatthyssen.com/2022/01/14/azure-bastion-azure-PowerShell-deployment-script/
 #>
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -77,13 +77,43 @@ $writeSeperatorSpaces = " - "
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Check if PowerShell runs as Administrator (when not running from Cloud Shell), otherwise exit the script
+
+if ($PSVersionTable.Platform -eq "Unix") {
+    Write-Host ($writeEmptyLine + "# Running in Cloud Shell" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine
+    
+    ## Start script execution    
+    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine 
+} else {
+    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    $isAdministrator = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+        ## Check if running as Administrator, otherwise exit the script
+        if ($isAdministrator -eq $false) {
+        Write-Host ($writeEmptyLine + "# Please run PowerShell as Administrator" + $writeSeperatorSpaces + $currentTime)`
+        -foregroundcolor $foregroundColor1 $writeEmptyLine
+        Start-Sleep -s 3
+        exit
+        }
+        else {
+
+        ## If running as Administrator, start script execution    
+        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+        -foregroundcolor $foregroundColor1 $writeEmptyLine 
+        }
+}
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ## Suppress breaking change warning messages
 
 Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Change the current context to use the management subscription
+## Change the current context to use the Management subscription
 
 $subNameTest = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
 $tenant = Get-AzTenant | Where-Object {$_.Name -like "*$companyShortName*"}
@@ -211,12 +241,12 @@ Write-Host ($writeEmptyLine + "# Pip " + $bastionPipName + " available" + $write
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create the Bastion host (it takes around 6 minutes for the Bastion host to be deployed) if it not exists
+## Create the Bastion host (it takes around 10 minutes for the Bastion host to be deployed) if it not exists
 
 try {
     Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName  -ErrorAction Stop | Out-Null 
 } catch {
-    Write-Host ($writeEmptyLine + "# Bastion host deployment started, this can take up to 6 minutes" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Bastion host deployment started, this can take up to 10 minutes" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
 
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
