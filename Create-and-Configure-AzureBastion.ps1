@@ -208,11 +208,13 @@ $outboundRule6 = New-AzNetworkSecurityRuleConfig -Name "Deny_Any_Other_Outbound_
 -Access Deny -Protocol * -Direction Outbound -Priority 900 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange *
 
 # Create the NSG if it not exists
+
 try {
     Get-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNetworkSpoke -ErrorAction Stop | Out-Null 
 } catch {
     New-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNetworkSpoke -Location $region `
-    -SecurityRules $inboundRule1,$inboundRule2,$inboundRule3,$inboundRule4,$inboundRule5,$outboundRule1,$outboundRule2,$outboundRule3 -Force | Out-Null 
+    -SecurityRules $inboundRule1,$inboundRule2,$inboundRule3,$inboundRule4,$inboundRule5,$inboundRule6,$outboundRule1,$outboundRule2,$outboundRule3,$outboundRule4,$outboundRule5 `
+    $outboundRule6 -Force | Out-Null 
 }
 
 # Set tags NSG
