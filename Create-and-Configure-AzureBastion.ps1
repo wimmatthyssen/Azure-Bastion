@@ -213,7 +213,7 @@ try {
     Get-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNetworkSpoke -ErrorAction Stop | Out-Null 
 } catch {
     New-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNetworkSpoke -Location $region `
-    -SecurityRules $inboundRule1,$inboundRule2,$inboundRule3,$inboundRule4,$inboundRule5,$inboundRule6,$outboundRule1,$outboundRule2,$outboundRule3,$outboundRule4,$outboundRule5 `
+    -SecurityRules $inboundRule1,$inboundRule2,$inboundRule3,$inboundRule4,$inboundRule5,$inboundRule6,$outboundRule1,$outboundRule2,$outboundRule3,$outboundRule4,$outboundRule5,`
     $outboundRule6 -Force | Out-Null 
 }
 
