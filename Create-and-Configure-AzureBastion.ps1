@@ -18,7 +18,7 @@ And at the end it will lock the Azure Bastion resource group with a CanN
 
 Filename:       Create-and-Configure-AzureBastion.ps1
 Created:        01/06/2021
-Last modified:  10/04/2022
+Last modified:  03/05/2022
 Author:         Wim Matthyssen
 PowerShell:     Azure Cloud Shell or Azure PowerShell
 Version:        Install latest Azure PowerShell modules (at least Az version 5.9.0 and Az.Network version 4.7.0 is required)
@@ -154,36 +154,60 @@ Write-Host ($writeEmptyLine + "# Resource group $rgBastion available" + $writeSe
 
 # Inbound rules
 
-$inboundRule1 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_Internet" -Description "Allow_TCP_443_Internet" `
+# Rule to allow Ingress Traffic from public Internet
+$inboundRule1 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_Internet_Inbound" -Description "Allow_TCP_443_Internet_Inbound" `
 -Access Allow -Protocol TCP -Direction Inbound -Priority 100 -SourceAddressPrefix Internet -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 443
 
-$inboundRule2 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_GatewayManager" -Description "Allow_TCP_443_GatewayManager" `
+# Rule to allow Ingress Traffic to Azure Bastion control plane
+$inboundRule2 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_GatewayManager_Inbound" -Description "Allow_TCP_443_GatewayManager_Inbound" `
 -Access Allow -Protocol TCP -Direction Inbound -Priority 110 -SourceAddressPrefix GatewayManager -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 443
 
-$inboundRule3 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_4443_GatewayManager" -Description "Allow_TCP_4443_GatewayManager" `
+# Rule to allow Ingress Traffic to Azure Bastion control plane
+$inboundRule3 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_4443_GatewayManager_Inbound" -Description "Allow_TCP_4443_GatewayManager_Inbound" `
 -Access Allow -Protocol TCP -Direction Inbound -Priority 120 -SourceAddressPrefix GatewayManager -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 4443
 
-$inboundRule4 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_AzureLoadBalancer" -Description "Allow_TCP_443_AzureLoadBalancer" `
+# Rule to allow Ingress Traffic from Azure Load Balancer
+$inboundRule4 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_AzureLoadBalancer_Inbound" -Description "Allow_TCP_443_AzureLoadBalancer_Inbound" `
 -Access Allow -Protocol TCP -Direction Inbound -Priority 130 -SourceAddressPrefix AzureLoadBalancer -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange 443
 
-# The rule below denies all other inbound virtual network access
+# Rule to allow Ingress Traffic to Azure Bastion data plane
+$inboundRule5 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_8080_5701_BastionHostCommunication_Inbound" -Description "Allow_Any_8080_5701_BastionHostCommunication_Inbound" `
+-Access Allow -Protocol * -Direction Inbound -Priority 140 -SourceAddressPrefix VirtualNetwork -SourcePortRange * -DestinationAddressPrefix VirtualNetwork `
+-DestinationPortRange 8080,5701
 
-$inboundRule5 = New-AzNetworkSecurityRuleConfig -Name "Deny_any_other_traffic" -Description "Deny_any_other_traffic" `
+# Rule to deny all other inbound virtual network traffic
+$inboundRule6 = New-AzNetworkSecurityRuleConfig -Name "Deny_Any_Other_Inbound_Traffic" -Description "Deny_Any_Other_Inbound_Traffic" `
 -Access Deny -Protocol * -Direction Inbound -Priority 900 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange *
 
 # Outbound rules
 
-$outboundRule1 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_3389_VirtualNetwork" -Description "Allow_TCP_3389_VirtualNetwork" `
--Access Allow -Protocol TCP -Direction Outbound -Priority 100 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix VirtualNetwork -DestinationPortRange 3389
+# Rule to allow Egress Traffic to target VMs via RDP (TCP and UDP)
+$outboundRule1 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_3389_VirtualNetwork_Outbound" -Description "Allow_Any_3389_VirtualNetwork_Outbound" `
+-Access Allow -Protocol * -Direction Outbound -Priority 100 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix VirtualNetwork -DestinationPortRange 3389
 
-$outboundRule2 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_22_VirtualNetwork" -Description "Allow_TCP_22_VirtualNetwork" `
--Access Allow -Protocol TCP -Direction Outbound -Priority 110 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix VirtualNetwork -DestinationPortRange 22
+# Rule to allow Egress Traffic to target VMs via SSH (TCP and UPD)
+$outboundRule2 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_22_VirtualNetwork_Outbound" -Description "Allow_Any_22_VirtualNetwork_Outbound" `
+-Access Allow -Protocol * -Direction Outbound -Priority 110 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix VirtualNetwork -DestinationPortRange 22
 
-$outboundRule3 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_AzureCloud" -Description "Allow_TCP_443_AzureCloud" `
+# Rule to allow Egress Traffic to other public endpoints in Azure (e.g. for storing diagnostics logs and metering logs)
+$outboundRule3 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_AzureCloud_Outbound" -Description "Allow_TCP_443_AzureCloud_Outbound" `
 -Access Allow -Protocol TCP -Direction Outbound -Priority 120 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix AzureCloud -DestinationPortRange 443
 
-# Create the NSG if it not exists
+# Rule to allow Egress Traffic to Azure Bastion data plane
+$outboundRule4 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_8080_5701_BastionHostCommunication_Outbound" -Description "Allow_Any_8080_5701_BastionHostCommunication_Outbound" `
+-Access Allow -Protocol * -Direction Outbound -Priority 130 -SourceAddressPrefix VirtualNetwork -SourcePortRange * -DestinationAddressPrefix VirtualNetwork `
+-DestinationPortRange 8080,5701
 
+# Rule to allow Egress Traffic to Internet to allow Azure Bastion to communicate with the Internet for session and certificate validation
+$outboundRule5 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_80_Internet_Outbound" -Description "Allow_Any_80_Internet_Outbound" `
+-Access Allow -Protocol * -Direction Outbound -Priority 140 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix Internet `
+-DestinationPortRange 80
+
+# Rule to deny all other outbound virtual network traffic
+$outboundRule6 = New-AzNetworkSecurityRuleConfig -Name "Deny_Any_Other_Outbound_Traffic" -Description "Deny_Any_Other_Outbound_Traffic" `
+-Access Deny -Protocol * -Direction Outbound -Priority 900 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange *
+
+# Create the NSG if it not exists
 try {
     Get-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNetworkSpoke -ErrorAction Stop | Out-Null 
 } catch {
@@ -200,7 +224,6 @@ Write-Host ($writeEmptyLine + "# NSG $nsgNameBastion available" + $writeSeperato
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 # Create the AzureBastionSubnet if it not exists
-
 try {
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
 
@@ -212,7 +235,6 @@ try {
 }
 
 # Attach the NSG to the AzureBastionSubnet (also if the AzureBastionSubnet exists and misses and NSG)
-
 $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet
 $nsg = Get-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNetworkSpoke
 $subnet.NetworkSecurityGroup = $nsg
