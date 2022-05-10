@@ -44,26 +44,27 @@ $spoke = "hub"
 $region = #<your region here> The used Azure public region. Example: "westeurope"
 $purpose = "bastion"
 
-$rgBastion = #<your Bastion rg here> The new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion"
-$rgNetworkSpoke = #<your VNet rg here> The Azure resource group in which your existing VNet is deployed. Example: "rg-hub-myh-networking"
-$rgLogAnalyticsSpoke = #<your Log Analytics rg here> The Azure resource group your existing Log Analytics workspace is deployed. Example: "rg-hub-myh-management"
+$rgBastion = #<your Bastion rg here> The new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
+$rgNetworkSpoke = #<your VNet rg here> The Azure resource group in which your existing VNet is deployed. Example: "rg-hub-myh-networking-01"
+$rgLogAnalyticsSpoke = #<your Log Analytics rg here> The Azure resource group your existing Log Analytics workspace is deployed. Example: "rg-hub-myh-management-01"
 
 $logAnalyticsName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
 
-$vnetName = #<your VNet name here> The existing VNet in which the Bastion resource will be created. Example: "vnet-hub-myh-weu"
+$vnetName = #<your VNet name here> The existing VNet in which the Bastion resource will be created. Example: "vnet-hub-myh-weu-01"
 $subnetBastionName = "AzureBastionSubnet"
 $subnetBastionAddress = #<your AzureBastionSubnet range here> The subnet must have a minimum subnet size of /26. Example: "10.1.1.128/26"
 $nsgBastionName = #<your AzureBastionSubnet NSG name here> The name of the NSG associated with the AzureBastionSubnet. Example: "nsg-AzureBastionSubnet"
 $nsgBastionDiagnosticsName = #<your NSG Bastion Diagnostics settings name here> The name of the NSG diagnostic settings for Bastion. Example: "diag-nsg-AzureBastionSubnet"
 
-$bastionName = #<your name here> The name of the new Bastion resource. Example: "bas-hub-myh"
+$bastionName = #<your name here> The name of the new Bastion resource. Example: "bas-hub-myh-01"
 
-$pipBastionName = #<your Bastion PIP here> The public IP address of the Bastion resource. Example: "pip-bas-hub-myh"
+$pipBastionName = #<your Bastion PIP here> The public IP address of the Bastion resource. Example: "pip-bas-hub-myh-01"
 $pipBastionAllocationMethod = "Static"
 $pipBastionSku = "Standard"
-$pipBastionDiagnosticsName = #<your PIP Bastion Diagnostics settings name here> The name of the PIP diagnostic settings for Bastion. Example: "diag-nsg-AzureBastionSubnet"
+$pipBastionDiagnosticsName = #<your PIP Bastion Diagnostics settings name here> The name of the PIP diagnostic settings for Bastion. Example: "diag-pip-bas-hub-myh-01"
 
-$bastionDiagnosticsName = #<your Bastion Diagnostics settings name here> The name of the new diagnostic settings for Bastion. Example: "diag-bas-hub-myh"
+$bastionSku = "Basic"
+$bastionDiagnosticsName = #<your Bastion Diagnostics settings name here> The name of the new diagnostic settings for Bastion. Example: "diag-bas-hub-myh-01"
 
 $tagSpokeName = #<your environment tag name here> The environment tag name you want to use. Example:"Env"
 $tagSpokeValue = "$($spoke[0].ToString().ToUpper())$($spoke.SubString(1))"
@@ -304,7 +305,7 @@ try {
 
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
 
-    New-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet | Out-Null 
+    New-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet -Sku $bastionSku | Out-Null 
 }
 
 Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
