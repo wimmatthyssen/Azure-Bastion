@@ -307,6 +307,13 @@ try {
     New-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet | Out-Null 
 }
 
+Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Set tags for the bastion resource
+
 # Add VNet tag to tags
 $tags += @{$tagVnetName=$vnetName}
 
@@ -314,7 +321,7 @@ $tags += @{$tagVnetName=$vnetName}
 $bastion = Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName 
 Set-AzBastion -InputObject $bastion -Tag $tags -Force | Out-Null
 
-Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# $bastionName tags set" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
