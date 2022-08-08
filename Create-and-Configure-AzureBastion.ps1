@@ -17,8 +17,8 @@ Create the AzureBastionSubnet with an associated network security group (NSG), i
 The NSG itself will contain all the required inbound and outbound security rules. If the AzureBastionSubnet exists but does not have an associated NSG, it will attach the newly created NSG. 
 The AzureBastionSubnet at least must have a subnet size of /26 or larger. * Also apply the necessary tags and diagnostic settings to the NSG.
 Create a Standard SKU PIP for the Bastion host, if it not already exists. Also apply the necessary tags and diagnostic settings to this PIP.
-Create the Bastion host (Basic SKU), if it not already exists. Keep in mind that it can take up to 5 minutes for the Bastion host to be deployed. Also apply the necessary tags to the Bastion host.
-Set the diagnostic settings (log and metrics)  for the bastion resource if they don’t exist.
+Create the Bastion host (Basic SKU), if it not already exists. Keep in mind that it can take up to 6 minutes for the Bastion host to be deployed. Also apply the necessary tags to the Bastion host.
+Set the diagnostic settings (log and metrics) for the bastion resource if they don’t exist.
 Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 .NOTES
@@ -52,7 +52,7 @@ $region = #<your region here> The used Azure public region. Example: "westeurope
 $purpose = "bastion"
 
 $rgBastion = #<your Bastion rg here> The new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
-$rgNetworkSpoke = #<your VNet rg here> The Azure resource group in which your existing VNet is deployed. Example: "rg-hub-myh-networking-01"
+$rgNetworkSpoke = #<your VNet rg here> The Azure resource group in which you're existing VNet is deployed. Example: "rg-hub-myh-networking-01"
 $rgLogAnalyticsSpoke = #<your Log Analytics rg here> The Azure resource group your existing Log Analytics workspace is deployed. Example: "rg-hub-myh-management-01"
 
 $logAnalyticsName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
@@ -204,7 +204,7 @@ $outboundRule1 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_3389_VirtualNe
 $outboundRule2 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_22_VirtualNetwork_Outbound" -Description "Allow_Any_22_VirtualNetwork_Outbound" `
 -Access Allow -Protocol * -Direction Outbound -Priority 110 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix VirtualNetwork -DestinationPortRange 22
 
-# Rule to allow Egress Traffic to other public endpoints in Azure (e.g. for storing diagnostics logs and metering logs)
+# Rule to allow Egress Traffic to other public endpoints in Azure (e.g., for storing diagnostics logs and metering logs)
 $outboundRule3 = New-AzNetworkSecurityRuleConfig -Name "Allow_TCP_443_AzureCloud_Outbound" -Description "Allow_TCP_443_AzureCloud_Outbound" `
 -Access Allow -Protocol TCP -Direction Outbound -Priority 120 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix AzureCloud -DestinationPortRange 443
 
@@ -222,7 +222,7 @@ $outboundRule5 = New-AzNetworkSecurityRuleConfig -Name "Allow_Any_80_Internet_Ou
 $outboundRule6 = New-AzNetworkSecurityRuleConfig -Name "Deny_Any_Other_Traffic_Outbound" -Description "Deny_Any_Other_Outbound_Traffic_Outbound" `
 -Access Deny -Protocol * -Direction Outbound -Priority 900 -SourceAddressPrefix * -SourcePortRange * -DestinationAddressPrefix * -DestinationPortRange *
 
-# Create the NSG if it not exists
+# Create the NSG if it does not exist
 
 try {
     Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkSpoke -ErrorAction Stop | Out-Null 
@@ -250,7 +250,7 @@ try {
     -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
-# Create the AzureBastionSubnet if it not exists
+# Create the AzureBastionSubnet if it does not exist
 try {
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
 
@@ -272,7 +272,7 @@ Write-Host ($writeEmptyLine + "# Subnet $subnetBastionName available with attach
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create a Public IP Address (PIP) for the Bastion host if it not exists. Add specified tags and diagnostic settings
+## Create a Public IP Address (PIP) for the Bastion host if it does not exist. Add specified tags and diagnostic settings
 
 try {
     Get-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastion -ErrorAction Stop | Out-Null 
@@ -301,12 +301,12 @@ Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available" + $write
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create the Bastion host (it takes around 10 minutes for the Bastion host to be deployed) if it not exists
+## Create the Bastion host (it takes around 6 minutes for the Bastion host to be deployed) if it does not exist
 
 try {
-    Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName  -ErrorAction Stop | Out-Null 
+    Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -ErrorAction Stop | Out-Null 
 } catch {
-    Write-Host ($writeEmptyLine + "# Bastion host deployment started, this can take up to 6 minutes" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Bastion host deployment started; this can take up to 6 minutes" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
 
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
