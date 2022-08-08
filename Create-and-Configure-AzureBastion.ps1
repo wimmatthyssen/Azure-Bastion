@@ -17,7 +17,7 @@ Create the AzureBastionSubnet with an associated network security group (NSG), i
 The NSG itself will contain all the required inbound and outbound security rules. If the AzureBastionSubnet exists but does not have an associated NSG, it will attach the newly created NSG. 
 The AzureBastionSubnet at least must have a subnet size of /26 or larger. * Also apply the necessary tags and diagnostic settings to the NSG.
 Create a Standard SKU PIP for the Bastion host, if it not already exists. Also apply the necessary tags and diagnostic settings to this PIP.
-Create the Bastion host (Basic SKU), if it not already exists. Keep in mind that it can take up to 6 minutes for the Bastion host to be deployed. Also apply the necessary tags to the Bastion host.
+Create the Bastion host (Basic SKU), if it not already exists. Keep in mind that it can take up to 9 minutes for the Bastion host to be deployed. Also apply the necessary tags to the Bastion host.
 Set the diagnostic settings (log and metrics) for the bastion resource if they don’t exist.
 Lock the Azure Bastion resource group with a CanNotDelete lock.
 
@@ -99,7 +99,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
     -foregroundcolor $foregroundColor1 $writeEmptyLine
     
     ## Start script execution    
-    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 8 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine 
 } else {
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -115,7 +115,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
         else {
 
         ## If running as Administrator, start script execution    
-        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 8 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
         -foregroundcolor $foregroundColor1 $writeEmptyLine 
         }
 }
@@ -301,12 +301,12 @@ Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available" + $write
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create the Bastion host (it takes around 6 minutes for the Bastion host to be deployed) if it does not exist
+## Create the Bastion host (it takes around 9 minutes for the Bastion host to be deployed) if it does not exist
 
 try {
     Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -ErrorAction Stop | Out-Null 
 } catch {
-    Write-Host ($writeEmptyLine + "# Bastion host deployment started; this can take up to 6 minutes" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Bastion host deployment started; this can take up to 9 minutes" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
 
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
