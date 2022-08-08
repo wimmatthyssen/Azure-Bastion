@@ -337,7 +337,7 @@ try {
     -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
-Write-Host ($writeEmptyLine + "# $bastionName diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Bastion host $bastionName diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
