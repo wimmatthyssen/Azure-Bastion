@@ -5,24 +5,31 @@ A script used to create and configure Azure Bastion within the HUB spoke VNet.
 
 .DESCRIPTION
 
-A script used to create and configure Azure Bastion (basic SKU) within the HUB spoke VNet. 
-The script will first store the set of specified tags into a hash table.
-Then it will create a resource group for the Azure Bastion resources (if it not already exists).
-Next it will create the AzureBastionSubnet (/26) with an associated network security group (NSG), which holds all the required inbound and outbound security rules (if it not already exists). 
-If the AzureBastionSubnet exists but does not have an associated NSG, it will attach the newly created NSG. 
-The script will also create a Public IP Address (PIP) for the Bastion host (if it not exists), and create the Bastion host (basic SKU), which can take up to 6 minutes (if it not exists). 
-It will also set the log and metrics settings for the bastion resource if they don't exist. 
-And at the end it will lock the Azure Bastion resource group with a CanNotDelete lock.
+A script used to create reate and configure Azure Bastion (basic SKU) within the HUB spoke VNet in the Management subscription.
+The script will do all of the following:
+
+Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
+Suppress breaking change warning messages.
+Change the current context to use a management subscription (a subscription with *management* in the Subscription name will be automatically selected).
+Store a specified set of tags in a hash table.
+Create a resource group for the Azure Bastion resources if it not already exists. Also apply the necessary tags to this resource group.
+Create the AzureBastionSubnet with an associated network security group (NSG), if it not already exists. 
+The NSG itself will contain all the required inbound and outbound security rules. If the AzureBastionSubnet exists but does not have an associated NSG, it will attach the newly created NSG. 
+The AzureBastionSubnet at least must have a subnet size of /26 or larger. * Also apply the necessary tags and diagnostic settings to the NSG.
+Create a Standard SKU PIP for the Bastion host, if it not already exists. Also apply the necessary tags and diagnostic settings to this PIP.
+Create the Bastion host (Basic SKU), if it not already exists. Keep in mind that it can take up to 5 minutes for the Bastion host to be deployed. Also apply the necessary tags to the Bastion host.
+Set the diagnostic settings (log and metrics)  for the bastion resource if they don’t exist.
+Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 .NOTES
 
 Filename:       Create-and-Configure-AzureBastion.ps1
 Created:        01/06/2021
-Last modified:  09/05/2022
+Last modified:  06/08/2022
 Author:         Wim Matthyssen
-Version:        2.1
+Version:        2.0
 PowerShell:     Azure Cloud Shell or Azure PowerShell
-Requires:       PowerShell Az (v5.9.0) and Az.Network (v4.7.0) Module
+Requires:       PowerShell Az (v5.9.0) and Az.Network (v4.7.0)
 Action:         Change variables were needed to fit your needs. 
 Disclaimer:     This script is provided "As Is" with no warranties.
 
@@ -33,7 +40,7 @@ Connect-AzAccount
 
 .LINK
 
-https://wmatthyssen.com/2022/01/14/azure-bastion-azure-PowerShell-deployment-script/
+https://wmatthyssen.com/2022/04/19/azure-bastion-azure-powershell-deployment-script/
 #>
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -57,14 +64,15 @@ $nsgBastionName = #<your AzureBastionSubnet NSG name here> The name of the NSG a
 $nsgBastionDiagnosticsName = #<your NSG Bastion Diagnostics settings name here> The name of the NSG diagnostic settings for Bastion. Example: "diag-nsg-AzureBastionSubnet"
 
 $bastionName = #<your name here> The name of the new Bastion resource. Example: "bas-hub-myh-01"
+$bastionSku = "Basic"
+$bastionDiagnosticsName = #<your Bastion Diagnostics settings name here> The name of the new diagnostic settings for Bastion. Example: "diag-bas-hub-myh-01"
 
 $pipBastionName = #<your Bastion PIP here> The public IP address of the Bastion resource. Example: "pip-bas-hub-myh-01"
 $pipBastionAllocationMethod = "Static"
 $pipBastionSku = "Standard"
+$pipBastionTier = "Regional"
+$pipBastionIpAddressVersion = "IPv4"
 $pipBastionDiagnosticsName = #<your PIP Bastion Diagnostics settings name here> The name of the PIP diagnostic settings for Bastion. Example: "diag-pip-bas-hub-myh-01"
-
-$bastionSku = "Basic"
-$bastionDiagnosticsName = #<your Bastion Diagnostics settings name here> The name of the new diagnostic settings for Bastion. Example: "diag-bas-hub-myh-01"
 
 $tagSpokeName = #<your environment tag name here> The environment tag name you want to use. Example:"Env"
 $tagSpokeValue = "$($spoke[0].ToString().ToUpper())$($spoke.SubString(1))"
@@ -91,7 +99,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
     -foregroundcolor $foregroundColor1 $writeEmptyLine
     
     ## Start script execution    
-    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 8 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine 
 } else {
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -107,7 +115,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
         else {
 
         ## If running as Administrator, start script execution    
-        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 8 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
         -foregroundcolor $foregroundColor1 $writeEmptyLine 
         }
 }
@@ -122,10 +130,10 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## Change the current context to use the Management subscription
 
-$subNameTest = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
+$subNameManagement = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
 $tenant = Get-AzTenant | Where-Object {$_.Name -like "*$companyShortName*"}
 
-Set-AzContext -TenantId $tenant.TenantId -SubscriptionId $subNameTest.SubscriptionId | Out-Null 
+Set-AzContext -TenantId $tenant.TenantId -SubscriptionId $subNameManagement.SubscriptionId | Out-Null 
 
 Write-Host ($writeEmptyLine + "# Management Subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
@@ -141,7 +149,7 @@ Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writ
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create a resource group for the Azure Bastion resources, if it not already exists. Add specified tags
+## Create a resource group for the Azure Bastion resources if it not already exists. Add specified tags and lock with a CanNotDelete lock
 
 try {
     Get-AzResourceGroup -Name $rgBastion -ErrorAction Stop | Out-Null
@@ -243,7 +251,6 @@ try {
 }
 
 # Create the AzureBastionSubnet if it not exists
-
 try {
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
 
@@ -255,7 +262,6 @@ try {
 }
 
 # Attach the NSG to the AzureBastionSubnet (also if the AzureBastionSubnet exists and misses and NSG)
-
 $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetBastionName -VirtualNetwork $vnet
 $nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkSpoke
 $subnet.NetworkSecurityGroup = $nsg
@@ -271,7 +277,8 @@ Write-Host ($writeEmptyLine + "# Subnet $subnetBastionName available with attach
 try {
     Get-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastion -ErrorAction Stop | Out-Null 
 } catch {
-    New-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastion -Location $region -AllocationMethod $pipBastionAllocationMethod -Sku $pipBastionSku -Force | Out-Null 
+    New-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastion -Location $region -AllocationMethod $pipBastionAllocationMethod -Sku $pipBastionSku `
+    -Tier $pipBastionTier -IpAddressVersion $pipBastionIpAddressVersion -Force | Out-Null 
 }
 
 # Set tags on PIP
@@ -279,15 +286,14 @@ $pipBastion = Get-AzPublicIpAddress -ResourceGroupName $rgBastion -Name $pipBast
 $pipBastion.Tag = $tags
 Set-AzPublicIpAddress -PublicIpAddress $pipBastion | Out-Null
 
-# Set the log and metrics settings for the PIP if they don't exist
-
+# Set the log and metrics settings for the PIP, if they don't exist
 try {
     Get-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -ErrorAction Stop | Out-Null
 } catch {
     $workSpace = Get-AzOperationalInsightsWorkspace -Name $logAnalyticsName -ResourceGroupName $rgLogAnalyticsSpoke
     
-    Set-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -Category DDoSProtectionNotifications,DDoSMitigationFlowLogs,DDoSMitigationReports -MetricCategory AllMetrics -Enabled $true `
-    -WorkspaceId ($workSpace.ResourceId) | Out-Null
+    Set-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -Category DDoSProtectionNotifications,DDoSMitigationFlowLogs,DDoSMitigationReports `
+    -MetricCategory AllMetrics -Enabled $true -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
 Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available" + $writeSeperatorSpaces + $currentTime)`
@@ -300,20 +306,13 @@ Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available" + $write
 try {
     Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName  -ErrorAction Stop | Out-Null 
 } catch {
-    Write-Host ($writeEmptyLine + "# Bastion host deployment started, this can take up to 10 minutes" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Bastion host deployment started, this can take up to 6 minutes" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
 
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
 
     New-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet -Sku $bastionSku | Out-Null 
 }
-
-Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
--foregroundcolor $foregroundColor2 $writeEmptyLine
-
-## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-## Set tags for the bastion resource
 
 # Add VNet tag to tags
 $tags += @{$tagVnetName=$vnetName}
@@ -322,12 +321,12 @@ $tags += @{$tagVnetName=$vnetName}
 $bastion = Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName 
 Set-AzBastion -InputObject $bastion -Tag $tags -Force | Out-Null
 
-Write-Host ($writeEmptyLine + "# $bastionName tags set" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Set the diagnostic settings (log and metrics) for the bastion resource, if they don't exist
+## Set the log and metrics settings for the bastion resource if they don't exist
 
 try {
     Get-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -ErrorAction Stop | Out-Null
