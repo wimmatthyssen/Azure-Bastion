@@ -11,4 +11,4 @@ Currenently this repository holds the following scritps:
   
  - **Set-AzureBastion-NSG-Inbound-security-rules-on-Target-VM-Subnet.ps1**
  
-  More information about the script used to to set the required NSG Inbound security rules on a Target VM subnet for Azure Bastion connectivity can be found on my blog:  
+   More information about the script used to to set the required NSG Inbound security rules on a Target VM subnet for Azure Bastion connectivity can be found on my blog:  
