@@ -39,7 +39,7 @@ Get-AzSubscription -SubscriptionId <"your Azure Subscirption ID here"> -TenantId
 
 .LINK
 
-
+https://wmatthyssen.com/2022/08/11/azure-bastion-set-azure-bastion-nsg-inbound-security-rules-on-the-target-vm-subnet-with-azure-powershell/
 #>
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
