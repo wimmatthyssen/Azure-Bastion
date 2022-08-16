@@ -5,7 +5,7 @@ A script used to create and configure Azure Bastion within the HUB spoke VNet.
 
 .DESCRIPTION
 
-A script used to create reate and configure Azure Bastion (basic SKU) within the HUB spoke VNet in a management subscription.
+A script used to create and configure Azure Bastion (basic SKU) within the HUB spoke VNet in a management subscription.
 The script will do all of the following:
 
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
