@@ -10,7 +10,8 @@ The script will do all of the following:
 
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
 Suppress breaking change warning messages.
-Change the current context to use a management subscription (a subscription with *management* in the Subscription name will be automatically selected).
+Change the current context to use a Management subscription (a subscription with *management* in the Subscription name will be automatically selected).
+Save the Log Analytics workspace from the Managment subscription in a variable.
 Store a specified set of tags in a hash table.
 Create a resource group for the Azure Bastion resources if it not already exists. Also apply the necessary tags to this resource group.
 Create the AzureBastionSubnet with an associated network security group (NSG), if it not already exists. 
@@ -25,10 +26,10 @@ Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 Filename:       Create-and-Configure-AzureBastion.ps1
 Created:        01/06/2021
-Last modified:  06/08/2022
+Last modified:  16/08/2022
 Author:         Wim Matthyssen
-Version:        2.0
-PowerShell:     Azure Cloud Shell or Azure PowerShell
+Version:        2.1
+PowerShell:     Azure PowerShell and Azure Cloud Shell
 Requires:       PowerShell Az (v5.9.0) and Az.Network (v4.7.0)
 Action:         Change variables were needed to fit your needs. 
 Disclaimer:     This script is provided "As Is" with no warranties.
@@ -51,11 +52,10 @@ $spoke = "hub"
 $region = #<your region here> The used Azure public region. Example: "westeurope"
 $purpose = "bastion"
 
-$rgBastion = #<your Bastion rg here> The new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
-$rgNetworkSpoke = #<your VNet rg here> The Azure resource group in which you're existing VNet is deployed. Example: "rg-hub-myh-networking-01"
-$rgLogAnalyticsSpoke = #<your Log Analytics rg here> The Azure resource group your existing Log Analytics workspace is deployed. Example: "rg-hub-myh-management-01"
+$rgBastionName = #<your Bastion rg name here> The name of the new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
+$rgNetworkingName = #<your VNet rg name here> The name of the Azure resource group in which you're existing VNet is deployed. Example: "rg-hub-myh-networking-01"
 
-$logAnalyticsName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
+$lawWorkSpaceName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
 
 $vnetName = #<your VNet name here> The existing VNet in which the Bastion resource will be created. Example: "vnet-hub-myh-weu-01"
 $subnetBastionName = "AzureBastionSubnet"
@@ -63,11 +63,11 @@ $subnetBastionAddress = #<your AzureBastionSubnet range here> The subnet must ha
 $nsgBastionName = #<your AzureBastionSubnet NSG name here> The name of the NSG associated with the AzureBastionSubnet. Example: "nsg-AzureBastionSubnet"
 $nsgBastionDiagnosticsName = #<your NSG Bastion Diagnostics settings name here> The name of the NSG diagnostic settings for Bastion. Example: "diag-nsg-AzureBastionSubnet"
 
-$bastionName = #<your name here> The name of the new Bastion resource. Example: "bas-hub-myh-01"
+$bastionName = #<your Bastion name here> The name of the new Bastion resource. Example: "bas-hub-myh-01"
 $bastionSku = "Basic"
 $bastionDiagnosticsName = #<your Bastion Diagnostics settings name here> The name of the new diagnostic settings for Bastion. Example: "diag-bas-hub-myh-01"
 
-$pipBastionName = #<your Bastion PIP here> The public IP address of the Bastion resource. Example: "pip-bas-hub-myh-01"
+$pipBastionName = #<your Bastion PIP name here> The public IP address of the Bastion resource. Example: "pip-bas-hub-myh-01"
 $pipBastionAllocationMethod = "Static"
 $pipBastionSku = "Standard"
 $pipBastionTier = "Regional"
@@ -140,6 +140,15 @@ Write-Host ($writeEmptyLine + "# Management Subscription in current tenant selec
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Save Log Analytics workspace from the Managment subscription in a variable
+
+$workSpace = Get-AzOperationalInsightsWorkspace | Where-Object Name -Match $lawWorkSpaceName 
+
+Write-Host ($writeEmptyLine + "# Log Analytics workspace variable created" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ## Store the specified set of tags in a hash table
 
 $tags = @{$tagSpokeName=$tagSpokeValue;$tagCostCenterName=$tagCostCenterValue;$tagCriticalityName=$tagCriticalityValue;$tagPurposeName=$tagPurposeValue}
@@ -152,15 +161,15 @@ Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writ
 ## Create a resource group for the Azure Bastion resources if it not already exists. Add specified tags and lock with a CanNotDelete lock
 
 try {
-    Get-AzResourceGroup -Name $rgBastion -ErrorAction Stop | Out-Null
+    Get-AzResourceGroup -Name $rgBastionName -ErrorAction Stop | Out-Null
 } catch {
-    New-AzResourceGroup -Name $rgBastion.ToLower() -Location $region -Force | Out-Null
+    New-AzResourceGroup -Name $rgBastionName.ToLower() -Location $region -Force | Out-Null
 }
 
 # Set tags Bastion resource group
-Set-AzResourceGroup -Name $rgBastion -Tag $tags | Out-Null
+Set-AzResourceGroup -Name $rgBastionName -Tag $tags | Out-Null
 
-Write-Host ($writeEmptyLine + "# Resource group $rgBastion available" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Resource group $rgBastionName available" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -225,15 +234,15 @@ $outboundRule6 = New-AzNetworkSecurityRuleConfig -Name "Deny_Any_Other_Traffic_O
 # Create the NSG if it does not exist
 
 try {
-    Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkSpoke -ErrorAction Stop | Out-Null 
+    Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName -ErrorAction Stop | Out-Null 
 } catch {
-    New-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkSpoke -Location $region `
+    New-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName -Location $region `
     -SecurityRules $inboundRule1,$inboundRule2,$inboundRule3,$inboundRule4,$inboundRule5,$inboundRule6,$outboundRule1,$outboundRule2,$outboundRule3,$outboundRule4,$outboundRule5,`
     $outboundRule6 -Force | Out-Null 
 }
 
 # Set tags NSG
-$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkSpoke
+$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName
 $nsg.Tag = $tags
 Set-AzNetworkSecurityGroup -NetworkSecurityGroup $nsg | Out-Null
 
@@ -243,16 +252,14 @@ Write-Host ($writeEmptyLine + "# NSG $nsgBastionName available" + $writeSeperato
 # Set the log settings for the NSG if they don't exist
 try {
     Get-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -ErrorAction Stop | Out-Null
-} catch {
-    $workSpace = Get-AzOperationalInsightsWorkspace -Name $logAnalyticsName -ResourceGroupName $rgLogAnalyticsSpoke
-    
+} catch { 
     Set-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -Category NetworkSecurityGroupEvent,NetworkSecurityGroupRuleCounter -Enabled $true `
     -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
 # Create the AzureBastionSubnet if it does not exist
 try {
-    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
+    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkingName
 
     $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetBastionName -VirtualNetwork $vnet -ErrorAction Stop | Out-Null 
 } catch {
@@ -263,7 +270,7 @@ try {
 
 # Attach the NSG to the AzureBastionSubnet (also if the AzureBastionSubnet exists and misses and NSG)
 $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetBastionName -VirtualNetwork $vnet
-$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkSpoke
+$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName
 $subnet.NetworkSecurityGroup = $nsg
 $vnet | Set-AzVirtualNetwork | Out-Null 
 
@@ -275,28 +282,26 @@ Write-Host ($writeEmptyLine + "# Subnet $subnetBastionName available with attach
 ## Create a Public IP Address (PIP) for the Bastion host if it does not exist. Add specified tags and diagnostic settings
 
 try {
-    Get-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastion -ErrorAction Stop | Out-Null 
+    Get-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastionName -ErrorAction Stop | Out-Null 
 } catch {
-    New-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastion -Location $region -AllocationMethod $pipBastionAllocationMethod -Sku $pipBastionSku `
-    -Tier $pipBastionTier -IpAddressVersion $pipBastionIpAddressVersion -Force | Out-Null 
+    New-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastionName -Location $region -AllocationMethod $pipBastionAllocationMethod -Sku $pipBastionSku `
+    -Tier $pipBastionTier -IpAddressVersion $pipBastionIpAddressVersion | Out-Null 
 }
 
 # Set tags on PIP
-$pipBastion = Get-AzPublicIpAddress -ResourceGroupName $rgBastion -Name $pipBastionName
+$pipBastion = Get-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastionName 
 $pipBastion.Tag = $tags
 Set-AzPublicIpAddress -PublicIpAddress $pipBastion | Out-Null
 
 # Set the log and metrics settings for the PIP, if they don't exist
 try {
     Get-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -ErrorAction Stop | Out-Null
-} catch {
-    $workSpace = Get-AzOperationalInsightsWorkspace -Name $logAnalyticsName -ResourceGroupName $rgLogAnalyticsSpoke
-    
+} catch {   
     Set-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -Category DDoSProtectionNotifications,DDoSMitigationFlowLogs,DDoSMitigationReports `
     -MetricCategory AllMetrics -Enabled $true -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
-Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available and diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -304,21 +309,20 @@ Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available" + $write
 ## Create the Bastion host (it takes around 9 minutes for the Bastion host to be deployed) if it does not exist
 
 try {
-    Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -ErrorAction Stop | Out-Null 
+    Get-AzBastion -ResourceGroupName $rgBastionName -Name $bastionName -ErrorAction Stop | Out-Null 
 } catch {
     Write-Host ($writeEmptyLine + "# Bastion host deployment started; this can take up to 9 minutes" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
 
-    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkSpoke
-
-    New-AzBastion -ResourceGroupName $rgBastion -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet -Sku $bastionSku | Out-Null 
+    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkingName
+    New-AzBastion -ResourceGroupName $rgBastionName -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet -Sku $bastionSku | Out-Null 
 }
 
 # Add VNet tag to tags
 $tags += @{$tagVnetName=$vnetName}
 
 # Set tags on Bastion host
-$bastion = Get-AzBastion -ResourceGroupName $rgBastion -Name $bastionName 
+$bastion = Get-AzBastion -ResourceGroupName $rgBastionName -Name $bastionName 
 Set-AzBastion -InputObject $bastion -Tag $tags -Force | Out-Null
 
 Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
@@ -330,9 +334,7 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSe
 
 try {
     Get-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -ErrorAction Stop | Out-Null
-} catch {
-    $workSpace = Get-AzOperationalInsightsWorkspace -Name $logAnalyticsName -ResourceGroupName $rgLogAnalyticsSpoke
-    
+} catch {    
     Set-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -Category BastionAuditLogs -MetricCategory AllMetrics -Enabled $true `
     -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
@@ -344,13 +346,13 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName diagnostic settings s
 
 ## Lock the Azure Bastion resource group with a CanNotDelete lock
 
-$lock = Get-AzResourceLock -ResourceGroupName $rgBastion
+$lock = Get-AzResourceLock -ResourceGroupName $rgBastionName
 
 if ($null -eq $lock){
-    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $rgBastion -LockNotes "Prevent $rgBastion from deletion" -Force | Out-Null
+    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $rgBastionName -LockNotes "Prevent $rgBastionName from deletion" -Force | Out-Null
     } 
 
-Write-Host ($writeEmptyLine + "# Resource group $rgBastion locked" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Resource group $rgBastionName locked" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
