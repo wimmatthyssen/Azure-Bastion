@@ -5,13 +5,13 @@ A script used to create and configure Azure Bastion within the HUB spoke VNet.
 
 .DESCRIPTION
 
-A script used to create reate and configure Azure Bastion (basic SKU) within the HUB spoke VNet in the Management subscription.
+A script used to create reate and configure Azure Bastion (basic SKU) within the HUB spoke VNet in a management subscription.
 The script will do all of the following:
 
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
 Suppress breaking change warning messages.
-Change the current context to use a Management subscription (a subscription with *management* in the Subscription name will be automatically selected).
-Save the Log Analytics workspace from the Management subscription in a variable.
+Change the current context to use a management subscription (a subscription with *management* in the subscription name will be automatically selected).
+Save the Log Analytics workspace from the management subscription in a variable.
 Store a specified set of tags in a hash table.
 Create a resource group for the Azure Bastion resources if it not already exists. Also apply the necessary tags to this resource group.
 Create the AzureBastionSubnet with an associated network security group (NSG), if it not already exists. 
@@ -128,19 +128,19 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Change the current context to use the Management subscription
+## Change the current context to use a management subscription
 
 $subNameManagement = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
 $tenant = Get-AzTenant | Where-Object {$_.Name -like "*$companyShortName*"}
 
 Set-AzContext -TenantId $tenant.TenantId -SubscriptionId $subNameManagement.SubscriptionId | Out-Null 
 
-Write-Host ($writeEmptyLine + "# Management Subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Management subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Save Log Analytics workspace from the Managment subscription in a variable
+## Save Log Analytics workspace from the managment subscription in a variable
 
 $workSpace = Get-AzOperationalInsightsWorkspace | Where-Object Name -Match $lawWorkSpaceName 
 
