@@ -11,7 +11,7 @@ The script will do all of the following:
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
 Suppress breaking change warning messages.
 Change the current context to use a Management subscription (a subscription with *management* in the Subscription name will be automatically selected).
-Save the Log Analytics workspace from the Managment subscription in a variable.
+Save the Log Analytics workspace from the Management subscription in a variable.
 Store a specified set of tags in a hash table.
 Create a resource group for the Azure Bastion resources if it not already exists. Also apply the necessary tags to this resource group.
 Create the AzureBastionSubnet with an associated network security group (NSG), if it not already exists. 
