@@ -48,6 +48,7 @@ https://wmatthyssen.com/2022/04/19/azure-bastion-azure-powershell-deployment-scr
 
 ## Variables
 
+$companyShortName = #"<your company short name here>" The three letter abbreviation of your company name here. Example: "myh"
 $spoke = "hub"
 $region = #<your region here> The used Azure public region. Example: "westeurope"
 $purpose = "bastion"
