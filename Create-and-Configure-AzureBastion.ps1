@@ -55,7 +55,7 @@ $purpose = "bastion"
 $rgBastionName = #<your Bastion rg name here> The name of the new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
 $rgNetworkingName = #<your VNet rg name here> The name of the Azure resource group in which you're existing VNet is deployed. Example: "rg-hub-myh-networking-01"
 
-$lawWorkSpaceName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
+$LogAnalyticsWorkspaceName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
 
 $vnetName = #<your VNet name here> The existing VNet in which the Bastion resource will be created. Example: "vnet-hub-myh-weu-01"
 $subnetBastionName = "AzureBastionSubnet"
@@ -140,9 +140,9 @@ Write-Host ($writeEmptyLine + "# Management subscription in current tenant selec
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Save Log Analytics workspace from the managment subscription in a variable
+## Save Log Analytics workspace from the Managment subscription in a variable
 
-$workSpace = Get-AzOperationalInsightsWorkspace | Where-Object Name -Match $lawWorkSpaceName 
+$workSpace = Get-AzOperationalInsightsWorkspace | Where-Object Name -Match $LogAnalyticsWorkspaceName 
 
 Write-Host ($writeEmptyLine + "# Log Analytics workspace variable created" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
