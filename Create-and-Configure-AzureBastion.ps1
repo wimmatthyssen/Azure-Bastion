@@ -37,6 +37,8 @@ Disclaimer:     This script is provided "As Is" with no warranties.
 .EXAMPLE
 
 Connect-AzAccount
+Get-AzTenant (if not using the default tenant)
+Set-AzContext -tenantID "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx" (if not using the default tenant)
 .\Create-and-Configure-AzureBastion.ps1
 
 .LINK
@@ -48,19 +50,18 @@ https://wmatthyssen.com/2022/04/19/azure-bastion-azure-powershell-deployment-scr
 
 ## Variables
 
-$companyShortName = #"<your company short name here>" The three-letter abbreviation of your company name here. Example: "myh"
 $spoke = "hub"
 $region = #<your region here> The used Azure public region. Example: "westeurope"
 $purpose = "bastion"
 
-$rgBastionName = #<your Bastion rg name here> The name of the new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
-$rgNetworkingName = #<your VNet rg name here> The name of the Azure resource group in which you're existing VNet is deployed. Example: "rg-hub-myh-networking-01"
+$rgNameBastion = #<your Bastion resource group name here> The name of the new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
+$rgNameNetworking = #<your VNet resource group name here> The name of the Azure resource group in which you're existing VNet is deployed. Example: "rg-hub-myh-networking-01"
 
 $logAnalyticsWorkspaceName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
 
 $vnetName = #<your VNet name here> The existing VNet in which the Bastion resource will be created. Example: "vnet-hub-myh-weu-01"
-$subnetBastionName = "AzureBastionSubnet"
-$subnetBastionAddress = #<your AzureBastionSubnet range here> The subnet must have a minimum subnet size of /26. Example: "10.1.1.128/26"
+$subnetNameBastion = "AzureBastionSubnet"
+$subnetAddressBastion = #<your AzureBastionSubnet range here> The subnet must have a minimum subnet size of /26. Example: "10.1.1.128/26"
 $nsgBastionName = #<your AzureBastionSubnet NSG name here> The name of the NSG associated with the AzureBastionSubnet. Example: "nsg-AzureBastionSubnet"
 $nsgBastionDiagnosticsName = #<your NSG Bastion Diagnostics settings name here> The name of the NSG diagnostic settings for Bastion. Example: "diag-nsg-AzureBastionSubnet"
 
@@ -68,18 +69,18 @@ $bastionName = #<your Bastion name here> The name of the new Bastion resource. E
 $bastionSku = "Basic"
 $bastionDiagnosticsName = #<your Bastion Diagnostics settings name here> The name of the new diagnostic settings for Bastion. Example: "diag-bas-hub-myh-01"
 
-$pipBastionName = #<your Bastion PIP name here> The public IP address of the Bastion resource. Example: "pip-bas-hub-myh-01"
-$pipBastionAllocationMethod = "Static"
-$pipBastionSku = "Standard"
-$pipBastionTier = "Regional"
-$pipBastionIpAddressVersion = "IPv4"
+$pipNameBastion = #<your Bastion PIP name here> The public IP address of the Bastion resource. Example: "pip-bas-hub-myh-01"
+$pipAllocationMethodBastion = "Static"
+$pipSkuBastion = "Standard"
+$pipTierBastion = "Regional"
+$pipIpAddressVersionBastion = "IPv4"
 $pipBastionDiagnosticsName = #<your PIP Bastion Diagnostics settings name here> The name of the PIP diagnostic settings for Bastion. Example: "diag-pip-bas-hub-myh-01"
 
 $tagSpokeName = #<your environment tag name here> The environment tag name you want to use. Example:"Env"
 $tagSpokeValue = "$($spoke[0].ToString().ToUpper())$($spoke.SubString(1))"
 $tagCostCenterName  = #<your costCenter tag name here> The costCenter tag name you want to use. Example:"CostCenter"
 $tagCostCenterValue = #<your costCenter tag value here> The costCenter tag value you want to use. Example: "23"
-$tagCriticalityName = #<your businessCriticality tag name here> The businessCriticality tag name you want to use. Example:"Criticality"
+$tagCriticalityName = #<your businessCriticality tag name here> The businessCriticality tag name you want to use. Example: "Criticality"
 $tagCriticalityValue = #<your businessCriticality tag value here> The businessCriticality tag value you want to use. Example: "High"
 $tagPurposeName  = #<your purpose tag name here> The purpose tag name you want to use. Example:"Purpose"
 $tagPurposeValue = "$($purpose[0].ToString().ToUpper())$($purpose.SubString(1))" 
@@ -132,16 +133,15 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 ## Change the current context to use a management subscription
 
 $subNameManagement = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
-$tenant = Get-AzTenant | Where-Object {$_.Name -like "*$companyShortName*"}
 
-Set-AzContext -TenantId $tenant.TenantId -SubscriptionId $subNameManagement.SubscriptionId | Out-Null 
+Set-AzContext -SubscriptionId $subNameManagement.SubscriptionId | Out-Null 
 
 Write-Host ($writeEmptyLine + "# Management subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Save Log Analytics workspace from the Managment subscription in a variable
+## Save Log Analytics workspace from the managment subscription in a variable
 
 $workSpace = Get-AzOperationalInsightsWorkspace | Where-Object Name -Match $logAnalyticsWorkspaceName 
 
@@ -162,15 +162,15 @@ Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writ
 ## Create a resource group for the Azure Bastion resources if it not already exists. Add specified tags and lock with a CanNotDelete lock
 
 try {
-    Get-AzResourceGroup -Name $rgBastionName -ErrorAction Stop | Out-Null
+    Get-AzResourceGroup -Name $rgNameBastion -ErrorAction Stop | Out-Null
 } catch {
-    New-AzResourceGroup -Name $rgBastionName.ToLower() -Location $region -Force | Out-Null
+    New-AzResourceGroup -Name $rgNameBastion.ToLower() -Location $region -Force | Out-Null
 }
 
 # Set tags Bastion resource group
-Set-AzResourceGroup -Name $rgBastionName -Tag $tags | Out-Null
+Set-AzResourceGroup -Name $rgNameBastion -Tag $tags | Out-Null
 
-Write-Host ($writeEmptyLine + "# Resource group $rgBastionName available" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion available" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -235,15 +235,15 @@ $outboundRule6 = New-AzNetworkSecurityRuleConfig -Name "Deny_Any_Other_Traffic_O
 # Create the NSG if it does not exist
 
 try {
-    Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName -ErrorAction Stop | Out-Null 
+    Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking -ErrorAction Stop | Out-Null 
 } catch {
-    New-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName -Location $region `
+    New-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking -Location $region `
     -SecurityRules $inboundRule1,$inboundRule2,$inboundRule3,$inboundRule4,$inboundRule5,$inboundRule6,$outboundRule1,$outboundRule2,$outboundRule3,$outboundRule4,$outboundRule5,`
     $outboundRule6 -Force | Out-Null 
 }
 
 # Set tags NSG
-$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName
+$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking
 $nsg.Tag = $tags
 Set-AzNetworkSecurityGroup -NetworkSecurityGroup $nsg | Out-Null
 
@@ -260,22 +260,22 @@ try {
 
 # Create the AzureBastionSubnet if it does not exist
 try {
-    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkingName
+    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNameNetworking
 
-    $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetBastionName -VirtualNetwork $vnet -ErrorAction Stop | Out-Null 
+    $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet -ErrorAction Stop | Out-Null 
 } catch {
-    $subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetBastionName -VirtualNetwork $vnet -AddressPrefix $subnetBastionAddress
+    $subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet -AddressPrefix $subnetAddressBastion
 
     $vnet | Set-AzVirtualNetwork | Out-Null 
 }
 
 # Attach the NSG to the AzureBastionSubnet (also if the AzureBastionSubnet exists and misses and NSG)
-$subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetBastionName -VirtualNetwork $vnet
-$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNetworkingName
+$subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet
+$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking
 $subnet.NetworkSecurityGroup = $nsg
 $vnet | Set-AzVirtualNetwork | Out-Null 
 
-Write-Host ($writeEmptyLine + "# Subnet $subnetBastionName available with attached NSG $nsgBastionName" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Subnet $subnetNameBastion available with attached NSG $nsgBastionName" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -283,14 +283,14 @@ Write-Host ($writeEmptyLine + "# Subnet $subnetBastionName available with attach
 ## Create a Public IP Address (PIP) for the Bastion host if it does not exist. Add specified tags and diagnostic settings
 
 try {
-    Get-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastionName -ErrorAction Stop | Out-Null 
+    Get-AzPublicIpAddress -Name $pipNameBastion -ResourceGroupName $rgNameBastion -ErrorAction Stop | Out-Null 
 } catch {
-    New-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastionName -Location $region -AllocationMethod $pipBastionAllocationMethod -Sku $pipBastionSku `
-    -Tier $pipBastionTier -IpAddressVersion $pipBastionIpAddressVersion | Out-Null 
+    New-AzPublicIpAddress -Name $pipNameBastion -ResourceGroupName $rgNameBastion -Location $region -AllocationMethod $pipAllocationMethodBastion -Sku $pipSkuBastion `
+    -Tier $pipTierBastion -IpAddressVersion $pipIpAddressVersionBastion | Out-Null 
 }
 
 # Set tags on PIP
-$pipBastion = Get-AzPublicIpAddress -Name $pipBastionName -ResourceGroupName $rgBastionName 
+$pipBastion = Get-AzPublicIpAddress -Name $pipNameBastion -ResourceGroupName $rgNameBastion 
 $pipBastion.Tag = $tags
 Set-AzPublicIpAddress -PublicIpAddress $pipBastion | Out-Null
 
@@ -302,7 +302,7 @@ try {
     -MetricCategory AllMetrics -Enabled $true -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
-Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available and diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Pip " + $pipNameBastion + " available and diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -310,20 +310,20 @@ Write-Host ($writeEmptyLine + "# Pip " + $pipBastionName + " available and diagn
 ## Create the Bastion host (it takes around 9 minutes for the Bastion host to be deployed) if it does not exist
 
 try {
-    Get-AzBastion -ResourceGroupName $rgBastionName -Name $bastionName -ErrorAction Stop | Out-Null 
+    Get-AzBastion -ResourceGroupName $rgNameBastion -Name $bastionName -ErrorAction Stop | Out-Null 
 } catch {
     Write-Host ($writeEmptyLine + "# Bastion host deployment started; this can take up to 9 minutes" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
 
-    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNetworkingName
-    New-AzBastion -ResourceGroupName $rgBastionName -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet -Sku $bastionSku | Out-Null 
+    $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNameNetworking
+    New-AzBastion -ResourceGroupName $rgNameBastion -Name $bastionName -PublicIpAddress $pipBastion -VirtualNetwork $vnet -Sku $bastionSku | Out-Null 
 }
 
 # Add VNet tag to tags
 $tags += @{$tagVnetName=$vnetName}
 
 # Set tags on Bastion host
-$bastion = Get-AzBastion -ResourceGroupName $rgBastionName -Name $bastionName 
+$bastion = Get-AzBastion -ResourceGroupName $rgNameBastion -Name $bastionName 
 Set-AzBastion -InputObject $bastion -Tag $tags -Force | Out-Null
 
 Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
@@ -347,13 +347,13 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName diagnostic settings s
 
 ## Lock the Azure Bastion resource group with a CanNotDelete lock
 
-$lock = Get-AzResourceLock -ResourceGroupName $rgBastionName
+$lock = Get-AzResourceLock -ResourceGroupName $rgNameBastion
 
 if ($null -eq $lock){
-    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $rgBastionName -LockNotes "Prevent $rgBastionName from deletion" -Force | Out-Null
+    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $rgNameBastion -LockNotes "Prevent $rgNameBastion from deletion" -Force | Out-Null
     } 
 
-Write-Host ($writeEmptyLine + "# Resource group $rgBastionName locked" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion locked" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
