@@ -32,7 +32,9 @@ Disclaimer:     This script is provided "As Is" with no warranties.
 .EXAMPLE
 
 Connect-AzAccount
-Get-AzSubscription -SubscriptionId <"your Azure Subscirption ID here"> -TenantId <"your Tenant ID here"> | Set-AzContext
+Get-AzTenant (if not using the default tenant)
+Set-AzContext -tenantID "<xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx>" (if not using the default tenant)
+Set-AzContext -Subscription "<SubscriptionName>" (if not using the default subscription)
 .\Set-AzureBastion-NSG-Inbound-security-rules-on-Target-VM-Subnet <"your NSG name here"> <"your NSG resource group name here"> 
 
 -> .\Set-AzureBastion-NSG-Inbound-security-rules-on-Target-VM-Subnet nsg-tst-myh-app-01 rg-tst-myh-networking-01
