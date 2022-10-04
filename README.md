@@ -11,4 +11,8 @@ Currenently this repository holds the following scritps:
   
  - **Set-AzureBastion-NSG-Inbound-security-rules-on-Target-VM-Subnet.ps1**
  
-   More information about the script used to to set the required NSG Inbound security rules on a Target VM subnet for Azure Bastion connectivity can be found on my blog: https://wmatthyssen.com/2022/08/11/azure-bastion-set-azure-bastion-nsg-inbound-security-rules-on-the-target-vm-subnet-with-azure-powershell/  
+   More information about the script used to set the required NSG Inbound security rules on a Target VM subnet for Azure Bastion connectivity can be found on my blog: https://wmatthyssen.com/2022/08/11/azure-bastion-set-azure-bastion-nsg-inbound-security-rules-on-the-target-vm-subnet-with-azure-powershell/ 
+
+ - **Upgrade-AzureBastion-Basic-SKU-to-Standard-SKU.ps1**
+ 
+   More information about the script used to upgrade a bastion host from the Basic to the Standard SKU can be found on my blog: https://wmatthyssen.com/2022/08/11/azure-bastion-set-azure-bastion-nsg-inbound-security-rules-on-the-target-vm-subnet-with-azure-powershell/ 
