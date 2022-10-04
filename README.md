@@ -15,4 +15,4 @@ Currenently this repository holds the following scritps:
 
  - **Upgrade-AzureBastion-Basic-SKU-to-Standard-SKU.ps1**
  
-   More information about the script used to upgrade a bastion host from the Basic to the Standard SKU can be found on my blog: https://wmatthyssen.com/2022/08/11/azure-bastion-set-azure-bastion-nsg-inbound-security-rules-on-the-target-vm-subnet-with-azure-powershell/ 
+   More information about the script used to upgrade a bastion host from the Basic to the Standard SKU can be found on my blog: https://wmatthyssen.com/2022/10/04/azure-bastion-upgrade-basic-sku-to-standard-sku-with-azure-powershell/
