@@ -11,7 +11,7 @@ The script will do all of the following:
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
 Suppress breaking change warning messages.
 Create Bastion resource variable for later use.
-Upgrade Bastion to Standard SKU if Basic SKU is currenlty set.
+Upgrade Bastion to Standard SKU if Basic SKU is currently set.
 
 ** Keep in mind upgrading Bastion to the Standard SKU can take up to 6 minutes. **
 
