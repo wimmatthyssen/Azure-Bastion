@@ -11,8 +11,9 @@ The script will do all of the following:
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
 Suppress breaking change warning messages.
 Create Bastion resource variable for later use.
-Delete Azure Bastion host with Standard SKU
+Delete Azure Bastion host with Standard SKU.
 Redeploy same Azure Bastion host with Basic SKU.
+Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 ** Keep in mind running this script can take up to 12 minutes. **
 ** If you have a resource lock on the resource group holding the bastion host, remove it temporarily while running the script **
@@ -137,12 +138,22 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName with $bastionSkuBasic
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Lock the Azure Bastion resource group with a CanNotDelete lock
+
+$lock = Get-AzResourceLock -ResourceGroupName $bastion.ResourceGroupName
+
+if ($null -eq $lock){
+    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $bastionName -LockNotes "Prevent $bastionName from deletion" -Force | Out-Null
+    } 
+
+Write-Host ($writeEmptyLine + "# Resource group $bastionName locked" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ## Write script completed
 
 Write-Host ($writeEmptyLine + "# Script completed" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor1 $writeEmptyLine 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
