@@ -43,7 +43,7 @@ Set-AzContext -Subscription "<SubscriptionName>" (if not using the default subsc
 
 .LINK
 
-
+https://wmatthyssen.com/2022/10/05/azure-bastion-switch-standard-sku-to-basic-sku-with-azure-powershell/
 #>
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
