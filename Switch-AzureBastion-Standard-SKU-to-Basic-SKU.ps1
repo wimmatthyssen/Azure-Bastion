@@ -11,6 +11,7 @@ The script will do all of the following:
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
 Suppress breaking change warning messages.
 Create Bastion resource variable for later use.
+Store the specified set of Azure Bastion host tags in a hash table.
 Delete Azure Bastion host with Standard SKU.
 Redeploy same Azure Bastion host with Basic SKU.
 Lock the Azure Bastion resource group with a CanNotDelete lock.
@@ -113,6 +114,15 @@ Write-Host ($writeEmptyLine + "# Bastion variable created" + $writeSeperatorSpac
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Store the specified set of Azure Bastion host tags in a hash table
+
+$bastionTags = (Get-AzResource -ResourceGroupName $bastion.ResourceGroupName -ResourceName $bastion.Name).Tags
+
+Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine 
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ## Delete Bastion host with Standard SKU
 
 $bastionName = $bastion.Name
@@ -130,8 +140,12 @@ $pipName = Get-AzPublicIpAddress -ResourceGroupName $bastion.ResourceGroupName
 $vnetName = Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.Name}}
 $rgNameVnet = Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.ResourceGroupName }}
 
+# Redeploy Bastion host with Basic SKU
 New-AzBastion -ResourceGroupName $bastion.ResourceGroupName -Name $bastion.Name -PublicIpAddress $pipName -VirtualNetworkRgName $rgNameVnet `
 -VirtualNetworkName $vnetName -Sku $bastionSkuBasic | Out-Null
+
+# Set tags on Bastion host
+Set-AzBastion -InputObject $bastion -Tag $bastionTags -Force | Out-Null
 
 Write-Host ($writeEmptyLine + "# Bastion host $bastionName with $bastionSkuBasic SKU available" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
