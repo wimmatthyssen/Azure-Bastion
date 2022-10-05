@@ -19,4 +19,4 @@ Currenently this repository holds the following scritps:
 
   - **Switch-AzureBastion-Standard-SKU-to-Basic-SKU.ps1**
  
-    More information about the script used to switch a bastion host from the Standard to the Basic SKU can be found on my blog: 
+    More information about the script used to switch a bastion host from the Standard to the Basic SKU can be found on my blog: https://wmatthyssen.com/2022/10/05/azure-bastion-switch-standard-sku-to-basic-sku-with-azure-powershell/ 
