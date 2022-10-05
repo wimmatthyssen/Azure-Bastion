@@ -157,7 +157,7 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName with $bastionSkuBasic
 $lock = Get-AzResourceLock -ResourceGroupName $bastion.ResourceGroupName
 
 if ($null -eq $lock){
-    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $bastionName -LockNotes "Prevent $bastionName from deletion" -Force | Out-Null
+    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $bastion.ResourceGroupName -LockNotes "Prevent $bastionName from deletion" -Force | Out-Null
     } 
 
 Write-Host ($writeEmptyLine + "# Resource group $bastionName locked" + $writeSeperatorSpaces + $currentTime)`
