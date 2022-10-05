@@ -11,6 +11,7 @@ The script will do all of the following:
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
 Suppress breaking change warning messages.
 Create Bastion resource variable for later use.
+Store the specified set of Azure Bastion host tags in a hash table.
 Upgrade Bastion to Standard SKU if Basic SKU is currently set.
 
 ** Keep in mind upgrading Bastion to the Standard SKU can take up to 6 minutes. **
@@ -19,9 +20,9 @@ Upgrade Bastion to Standard SKU if Basic SKU is currently set.
 
 Filename:       Upgrade-AzureBastion-Basic-SKU-to-Standard-SKU.ps1
 Created:        03/10/2022
-Last modified:  03/10/2022
+Last modified:  05/10/2022
 Author:         Wim Matthyssen
-Version:        1.0
+Version:        1.2
 PowerShell:     Azure Cloud Shell or Azure PowerShell
 Requires:       PowerShell Az (v8.1.0) and Az.Network (v4.18.0)
 Action:         Change variables were needed to fit your needs. 
@@ -111,13 +112,26 @@ Write-Host ($writeEmptyLine + "# Bastion variable created" + $writeSeperatorSpac
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Store the specified set of Azure Bastion host tags in a hash table
+
+$bastionTags = (Get-AzResource -ResourceGroupName $bastion.ResourceGroupName -ResourceName $bastion.Name).Tags
+
+Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine 
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ## Upgrade Bastion to Standard SKU if Basic SKU is currenlty set
 
 $bastionName = $bastion.Name
 
+# Upgrade Bastion host to Standard SKU and 2 Scale Units
 Set-AzBastion -InputObject $bastion -Sku $bastionSkuStandard -ScaleUnit $bastionScaleUnit -Force | Out-Null
 
-Write-Host ($writeEmptyLine + "# Bastion host $bastionName running with Standard SKU with $bastionScaleUnit Scale Units" + $writeSeperatorSpaces + $currentTime)`
+# Set tags on Bastion host
+Set-AzBastion -InputObject $bastion -Tag $bastionTags -Force | Out-Null
+
+Write-Host ($writeEmptyLine + "# Bastion host $bastionName running with Standard SKU and $bastionScaleUnit Scale Units" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
