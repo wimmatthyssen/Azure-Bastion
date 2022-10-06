@@ -23,9 +23,9 @@ Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 Filename:       Switch-AzureBastion-Standard-SKU-to-Basic-SKU.ps1
 Created:        04/10/2022
-Last modified:  04/10/2022
+Last modified:  06/10/2022
 Author:         Wim Matthyssen
-Version:        1.0
+Version:        1.2
 PowerShell:     Azure Cloud Shell or Azure PowerShell
 Requires:       PowerShell Az (v8.1.0) and Az.Network (v4.18.0)
 Action:         Change variables were needed to fit your needs. 
@@ -136,12 +136,12 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName temporarily removed" 
 
 ## Redeploy Bastion host with Basic SKU
 
-$pipName = Get-AzPublicIpAddress -ResourceGroupName $bastion.ResourceGroupName
+$pipNameBastion = Get-AzPublicIpAddress -ResourceGroupName $bastion.ResourceGroupName
 $vnetName = Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.Name}}
-$rgNameVnet = Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.ResourceGroupName }}
+$rgNameNetworking = Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.ResourceGroupName }}
 
 # Redeploy Bastion host with Basic SKU
-New-AzBastion -ResourceGroupName $bastion.ResourceGroupName -Name $bastion.Name -PublicIpAddress $pipName -VirtualNetworkRgName $rgNameVnet `
+New-AzBastion -ResourceGroupName $bastion.ResourceGroupName -Name $bastion.Name -PublicIpAddress $pipNameBastion -VirtualNetworkRgName $rgNameNetworking `
 -VirtualNetworkName $vnetName -Sku $bastionSkuBasic | Out-Null
 
 # Set tags on Bastion host
@@ -154,13 +154,14 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName with $bastionSkuBasic
 
 ## Lock the Azure Bastion resource group with a CanNotDelete lock
 
+$rgNameBastion = $bastion.ResourceGroupName
 $lock = Get-AzResourceLock -ResourceGroupName $bastion.ResourceGroupName
 
 if ($null -eq $lock){
-    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $bastion.ResourceGroupName -LockNotes "Prevent $bastionName from deletion" -Force | Out-Null
+    New-AzResourceLock -LockName DoNotDeleteLock -LockLevel CanNotDelete -ResourceGroupName $bastion.ResourceGroupName -LockNotes "Prevent $rgNameBastion from deletion" -Force | Out-Null
     } 
 
-Write-Host ($writeEmptyLine + "# Resource group $bastionName locked" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion locked" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
