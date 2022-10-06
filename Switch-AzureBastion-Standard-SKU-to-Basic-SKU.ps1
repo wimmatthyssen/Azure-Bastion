@@ -16,7 +16,7 @@ Delete Azure Bastion host with Standard SKU.
 Redeploy same Azure Bastion host with Basic SKU.
 Lock the Azure Bastion resource group with a CanNotDelete lock.
 
-** Keep in mind running this script can take up to 12 minutes. **
+** Keep in mind running this script can take up to 14 minutes. **
 ** If you have a resource lock on the resource group holding the bastion host, remove it temporarily while running the script **
 
 .NOTES
@@ -76,7 +76,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
     -foregroundcolor $foregroundColor1 $writeEmptyLine
     
     ## Start script execution    
-    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it can take up to 12 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it can take up to 14 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine 
 } else {
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -92,7 +92,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
         else {
 
         ## If running as Administrator, start script execution    
-        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it can take up to 12 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it can take up to 14 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
         -foregroundcolor $foregroundColor1 $writeEmptyLine 
         }
 }
