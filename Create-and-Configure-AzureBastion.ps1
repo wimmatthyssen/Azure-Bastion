@@ -13,11 +13,15 @@ Suppress breaking change warning messages.
 Change the current context to use a management subscription (a subscription with *management* in the subscription name will be automatically selected).
 Save the Log Analytics workspace from the management subscription in a variable.
 Store a specified set of tags in a hash table.
+Register Insights provider in order for flow logging to work, if not already registered. Registration may take up to 10 minutes.
+Create a resource group for the storage account which will store the flow logs, if it not already exists.
+Create a general purpose v2 storage account for storing the flow logs with specific configuration settings, if it not already exists. Also apply the necessary tags to this storage account.
 Create a resource group for the Azure Bastion resources if it not already exists. Also apply the necessary tags to this resource group.
 Create the AzureBastionSubnet with an associated network security group (NSG), if it not already exists. 
 The NSG itself will contain all the required inbound and outbound security rules. If the AzureBastionSubnet exists but does not have an associated NSG, it will attach the newly created NSG. 
 The AzureBastionSubnet at least must have a subnet size of /26 or larger. * Also apply the necessary tags and diagnostic settings to the NSG.
 Create a Standard SKU PIP for the Bastion host, if it not already exists. Also apply the necessary tags and diagnostic settings to this PIP.
+Enable NSG Flow logs (Version 2) and Traffic Analytics for the AzureBastionSubnet NSG.
 Create the Bastion host (Basic SKU), if it not already exists. Keep in mind that it can take up to 9 minutes for the Bastion host to be deployed. Also apply the necessary tags to the Bastion host.
 Set the diagnostic settings (log and metrics) for the bastion resource if they don’t exist.
 Lock the Azure Bastion resource group with a CanNotDelete lock.
@@ -26,9 +30,9 @@ Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 Filename:       Create-and-Configure-AzureBastion.ps1
 Created:        01/06/2021
-Last modified:  16/08/2022
+Last modified:  17/10/2022
 Author:         Wim Matthyssen
-Version:        2.1
+Version:        3.0
 PowerShell:     Azure PowerShell and Azure Cloud Shell
 Requires:       PowerShell Az (v5.9.0) and Az.Network (v4.7.0)
 Action:         Change variables were needed to fit your needs. 
@@ -56,8 +60,19 @@ $purpose = "bastion"
 
 $rgNameBastion = #<your Bastion resource group name here> The name of the new Azure resource group in which the new Bastion resource will be created. Example: "rg-hub-myh-bastion-01"
 $rgNameNetworking = #<your VNet resource group name here> The name of the Azure resource group in which you're existing VNet is deployed. Example: "rg-hub-myh-networking-01"
+$rgNameStorage = #<your storage account resource group name here> The name of the Azure resource group in which you're new or existing storage account is deployed. Example: "rg-hub-myh-storage-01"
+$rgNameNetworkWatcher = #<your Network Watcher resource group name here> The name of the Azure resource group in which you're existing Network Watcher is deployed. Example: "rg-hub-myh-networking-01"
 
+$networkWatcherName = #<your Network Watcher name here> The name of your existing Network Watcher. Example: "nw-hub-myh-we-01"
 $logAnalyticsWorkspaceName = #<your Log Analytics workspace name here> The name of your existing Log Analytics workspace. Example: "law-hub-myh-01"
+
+$storageAccountName = #<your storage account name here> The existing or new storage account to store the NSG Flow logs. Example: "sthubmyhlog01"
+$storageAccountSkuName = "Standard_LRS"
+$storageAccountType = "StorageV2"
+$storageMinimumTlsVersion = "TLS1_2"
+
+$nsgFlowLogsRetention = "90"
+$trafficAnalyticsInterval = "60"
 
 $vnetName = #<your VNet name here> The existing VNet in which the Bastion resource will be created. Example: "vnet-hub-myh-weu-01"
 $subnetNameBastion = "AzureBastionSubnet"
@@ -83,8 +98,12 @@ $tagCostCenterValue = #<your costCenter tag value here> The costCenter tag value
 $tagCriticalityName = #<your businessCriticality tag name here> The businessCriticality tag name you want to use. Example: "Criticality"
 $tagCriticalityValue = #<your businessCriticality tag value here> The businessCriticality tag value you want to use. Example: "High"
 $tagPurposeName  = #<your purpose tag name here> The purpose tag name you want to use. Example:"Purpose"
-$tagPurposeValue = "$($purpose[0].ToString().ToUpper())$($purpose.SubString(1))" 
+$tagPurposeValueBastion = "$($purpose[0].ToString().ToUpper())$($purpose.SubString(1))"
+$tagPurposeValueStorage = "Storage" 
+$tagPurposeValueLog = "Log"   
 $tagVnetName = #<your VNet tag name here> The vnet tag name you want to use. Example:"VNet"
+$tagSkuName = "Sku"
+$tagSkuValue = $storageAccountSkuName
 
 $global:currenttime= Set-PSBreakpoint -Variable currenttime -Mode Read -Action {$global:currenttime= Get-Date -UFormat "%A %m/%d/%Y %R"}
 $foregroundColor1 = "Red"
@@ -141,9 +160,9 @@ Write-Host ($writeEmptyLine + "# Management subscription in current tenant selec
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Save Log Analytics workspace from the managment subscription in a variable
+## Save Log Analytics workspace from the management subscription in a variable
 
-$workSpace = Get-AzOperationalInsightsWorkspace | Where-Object Name -Match $logAnalyticsWorkspaceName 
+$workSpace = Get-AzOperationalInsightsWorkspace | Where-Object Name -Match $logAnalyticsWorkSpaceName
 
 Write-Host ($writeEmptyLine + "# Log Analytics workspace variable created" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
@@ -152,10 +171,68 @@ Write-Host ($writeEmptyLine + "# Log Analytics workspace variable created" + $wr
 
 ## Store the specified set of tags in a hash table
 
-$tags = @{$tagSpokeName=$tagSpokeValue;$tagCostCenterName=$tagCostCenterValue;$tagCriticalityName=$tagCriticalityValue;$tagPurposeName=$tagPurposeValue}
+$tags = @{$tagSpokeName=$tagSpokeValue;$tagCostCenterName=$tagCostCenterValue;$tagCriticalityName=$tagCriticalityValue}
 
 Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine 
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Register Insights provider (Microsoft.Insights) in order for flow logging to work, if not already registered. Registration may take up to 10 minutes
+
+# Register Microsoft.Insights resource provider
+Register-AzResourceProvider -ProviderNamespace Microsoft.Insights  | Out-Null
+
+Write-Host ($writeEmptyLine + "# Microsoft.Insights resource provider currently registering or already registerd" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Create a resource group for the storage account which will store the flow logs, if it not already exists
+
+try {
+    Get-AzResourceGroup -Name $rgNameStorage -ErrorAction Stop | Out-Null 
+} catch {
+    New-AzResourceGroup -Name $rgNameStorage -Location $region -Force | Out-Null 
+}
+
+# Save variable tags in a new variable to add tags
+$tagsResourceGroup = $tags
+
+# Add Purpose tag to tagsResourceGroup
+$tagsResourceGroup += @{$tagPurposeName = $tagPurposeValueStorage}
+
+# Set tags rg storage
+Set-AzResourceGroup -Name $rgNameStorage -Tag $tagsResourceGroup | Out-Null
+
+Write-Host ($writeEmptyLine + "# Resource group $rgNameStorage available" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Create a general purpose v2 storage account for storing the flow logs with specific configuration settings, if it not already exists. Also apply the necessary tags to this storage account.
+
+try {
+    Get-AzStorageAccount -ResourceGroupName $rgNameStorage -Name $storageAccountName -ErrorAction Stop | Out-Null 
+} catch {
+    New-AzStorageAccount -ResourceGroupName $rgNameStorage -Name $storageAccountName -SkuName $storageAccountSkuName -Location $region -Kind $storageAccountType `
+    -AllowBlobPublicAccess $false -MinimumTlsVersion $storageMinimumTlsVersion | Out-Null 
+}
+
+# Save variable tags in a new variable to add tags
+$tagsStorageAccount = $tags
+
+# Add Purpose tag to tagsStorageAccount
+$tagsStorageAccount += @{$tagPurposeName = $tagPurposeValueLog}
+
+# Add Sku tag to tagsStorageAccount
+$tagsStorageAccount += @{$tagSkuName = $tagSkuValue}
+
+# Set tags storage account
+Set-AzStorageAccount -ResourceGroupName $rgNameStorage -Name $storageAccountName -Tag $tagsStorageAccount | Out-Null
+
+Write-Host ($writeEmptyLine + "# Storage account $storageAccountName created" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -167,8 +244,14 @@ try {
     New-AzResourceGroup -Name $rgNameBastion.ToLower() -Location $region -Force | Out-Null
 }
 
+# Save variable tags in a new variable to add tags
+$tagsBastion = $tags
+
+# Add Purpose tag to $tagsBastion
+$tagsBastion += @{$tagPurposeName = $tagPurposeValueBastion}
+
 # Set tags Bastion resource group
-Set-AzResourceGroup -Name $rgNameBastion -Tag $tags | Out-Null
+Set-AzResourceGroup -Name $rgNameBastion -Tag $tagsBastion | Out-Null
 
 Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion available" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
@@ -244,7 +327,7 @@ try {
 
 # Set tags NSG
 $nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking
-$nsg.Tag = $tags
+$nsg.Tag = $tagsBastion
 Set-AzNetworkSecurityGroup -NetworkSecurityGroup $nsg | Out-Null
 
 Write-Host ($writeEmptyLine + "# NSG $nsgBastionName available" + $writeSeperatorSpaces + $currentTime)`
@@ -291,7 +374,7 @@ try {
 
 # Set tags on PIP
 $pipBastion = Get-AzPublicIpAddress -Name $pipNameBastion -ResourceGroupName $rgNameBastion 
-$pipBastion.Tag = $tags
+$pipBastion.Tag = $tagsBastion
 Set-AzPublicIpAddress -PublicIpAddress $pipBastion | Out-Null
 
 # Set the log and metrics settings for the PIP, if they don't exist
@@ -304,6 +387,20 @@ try {
 
 Write-Host ($writeEmptyLine + "# Pip " + $pipNameBastion + " available and diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Enable NSG Flow logs (Version 2) and Traffic Analytics for the AzureBastionSubnet NSG
+
+$networkWatcher = Get-AzNetworkWatcher -Name $networkWatcherName -ResourceGroupName $rgNameNetworkWatcher
+$storageAccount = Get-AzStorageAccount -ResourceGroupName $rgNameStorage -Name $storageAccountName
+
+# Configure Flow log and Traffic Analytics
+Set-AzNetworkWatcherFlowLog -Name ($nsg.Name + "-flow-log") -NetworkWatcher $networkWatcher -TargetResourceId $nsg.Id -StorageId $storageAccount.Id -Enabled $true -FormatType Json `
+-FormatVersion 2 -EnableTrafficAnalytics -TrafficAnalyticsWorkspaceId ($workSpace.ResourceId) -TrafficAnalyticsInterval $trafficAnalyticsInterval -EnableRetention $true `
+-RetentionPolicyDays $nsgFlowLogsRetention -Tag $tagsBastion -Force | Out-Null
+
+Write-Host ($writeEmptyLine + "# NSG FLow logs and Traffic Analytics for $($nsg.Name) enabled" + $writeSeperatorSpaces + $currentTime) -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -320,11 +417,11 @@ try {
 }
 
 # Add VNet tag to tags
-$tags += @{$tagVnetName=$vnetName}
+$tagsBastion += @{$tagVnetName=$vnetName}
 
 # Set tags on Bastion host
 $bastion = Get-AzBastion -ResourceGroupName $rgNameBastion -Name $bastionName 
-Set-AzBastion -InputObject $bastion -Tag $tags -Force | Out-Null
+Set-AzBastion -InputObject $bastion -Tag $tagsBastion -Force | Out-Null
 
 Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
@@ -363,4 +460,4 @@ Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion locked" + $writeS
 Write-Host ($writeEmptyLine + "# Script completed" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor1 $writeEmptyLine 
 
-## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
