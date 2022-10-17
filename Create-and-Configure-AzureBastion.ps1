@@ -14,7 +14,7 @@ Change the current context to use a management subscription (a subscription with
 Save the Log Analytics workspace from the management subscription in a variable.
 Store a specified set of tags in a hash table.
 Register Insights provider in order for flow logging to work, if not already registered. Registration may take up to 10 minutes.
-Create a resource group for the storage account which will store the flow logs, if it not already exists.
+Create a resource group for the storage account which will store the NSG flow log data, if it not already exists.
 Create a general purpose v2 storage account for storing the flow logs with specific configuration settings, if it not already exists. Also apply the necessary tags to this storage account.
 Create a resource group for the Azure Bastion resources if it not already exists. Also apply the necessary tags to this resource group.
 Create the AzureBastionSubnet with an associated network security group (NSG), if it not already exists. 
