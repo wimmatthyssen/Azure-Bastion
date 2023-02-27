@@ -10,11 +10,11 @@ A script used to RDP to a target Azure Windows VM using Tunneling from Azure Bas
 The script will do all of the following:
 
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell); otherwise, the Azure PowerShell script will be exited.
-Suppress breaking change warning messages.
-Change the current context to use the bastion host subscription.
-Save Bastion host in a variable.
-Change the current context to use the target VM subscription.
-RDP to VM using Azure Bastion.
+Remove the breaking change warning messages.
+Change the current context to the subscription holding the Azure Bastion host.
+Save the Bastion host as a variable.
+Change the current context to the specified subscription holding the target VM.
+RDP to the target VM using the native client through Azure Bastion.
 
 .NOTES
 
@@ -85,13 +85,13 @@ if ($isAdministrator -eq $false) {
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Suppress breaking change warning messages
+## Remove the breaking change warning messages
 
 Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Change the current context to use the bastion host subscription
+## Change the current context to the subscription holding the Azure Bastion host
 
 #<your subscription value hare> Replace with the name value of your Azure Bastion subscription. Example: "management" -> {$_.Name -like "*management"*"} 
 $subNameBastion = Get-AzSubscription | Where-Object {$_.Name -like "*<your subscription value here>*"} 
@@ -103,7 +103,7 @@ Write-Host ($writeEmptyLine + "# Bastion host subscription in current tenant sel
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Save Bastion host in a variable
+## Save the Bastion host as a variable
 
 $bastion = Get-AzBastion
 
@@ -112,7 +112,7 @@ Write-Host ($writeEmptyLine + "# Bastion host variable created" + $writeSeperato
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Change the current context to use the target VM subscription
+## Change the current context to the specified subscription holding the target VM
 
 Set-AzContext -Subscription $subscriptionName | Out-Null
 
@@ -121,7 +121,7 @@ Write-Host ($writeEmptyLine + "# Target VM subscription in current tenant select
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## RDP to VM using Azure Bastion
+## RDP to the target VM using the native client through Azure Bastion
 
 $vm = Get-AzVM -Name $vmName
 
