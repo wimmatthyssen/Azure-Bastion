@@ -41,6 +41,7 @@ Set-AzContext -tenantID "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx" (if not using the defa
 
 .LINK
 
+https://wmatthyssen.com/2023/02/27/connecting-to-an-azure-windows-vm-using-an-azure-powershell-script-and-native-client-via-azure-bastion/
 #>
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
