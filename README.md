@@ -21,6 +21,6 @@ Currenently this repository holds the following scritps:
  
     More information about the script used to switch a bastion host from the Standard to the Basic SKU can be found on my blog: https://wmatthyssen.com/2022/10/05/azure-bastion-switch-standard-sku-to-basic-sku-with-azure-powershell/ 
 
-  - ** Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1**
+  - **Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1**
  
     More information about the script used to connect to an Azure Windows VM using a native client on your local computer through Azure Bastion can be found on my blog: https://wmatthyssen.com/2023/02/27/connecting-to-an-azure-windows-vm-using-an-azure-powershell-script-and-native-client-via-azure-bastion/ 
