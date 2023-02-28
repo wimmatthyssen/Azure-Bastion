@@ -127,6 +127,9 @@ Write-Host ($writeEmptyLine + "# Target VM subscription in current tenant select
 
 ## RDP to the target VM using the native client through Azure Bastion
 
+Write-Host ($writeEmptyLine + "# Setting up remote desktop connection to VM with name $vmName " + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
 $vm = Get-AzVM -Name $vmName
 
 # Azure CLI
