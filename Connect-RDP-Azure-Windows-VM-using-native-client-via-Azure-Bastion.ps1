@@ -11,11 +11,13 @@ The script will do all of the following:
 
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell); otherwise, the Azure PowerShell script will be exited.
 Remove the breaking change warning messages.
+Check if Azure CLI is installed; otherwise, install it.
 Change the current context to the subscription holding the Azure Bastion host.
 Save the Bastion host as a variable.
+Check if the Standard SKU tier for Azure Bastion is in use; otherwise, exit the script.
 Change the current context to the specified subscription holding the target VM.
 RDP to the target VM using the native client through Azure Bastion.
-Remote Desktop File "conn.rdp" will be removed when the RDP connection is terminated.
+Remote Desktop File conn.rdp will be removed when the RDP connection is terminated.
 
 .NOTES
 
@@ -23,7 +25,7 @@ Filename:       Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Basti
 Created:        26/02/2023
 Last modified:  28/02/2023
 Author:         Wim Matthyssen
-Version:        1.2
+Version:        1.4
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
 CLI:            Azure CLI
@@ -85,13 +87,32 @@ if ($isAdministrator -eq $false) {
     # Begin script execution if you are running as Administrator 
     Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 1 minute to complete" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine 
-    }
+}
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## Remove the breaking change warning messages
 
 Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Check if Azure CLI is installed; otherwise, install it
+
+if ($null -eq (az version)) {
+    Write-Host ($writeEmptyLine + "# Azure CLI is now being installed, it will need around 2 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor2 $writeEmptyLine 
+    Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi
+    Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'
+    Remove-Item .\AzureCLI.msi
+} else {
+    Write-Host ($writeEmptyLine + "# Azure CLI is installed. If needed, it will be upgraded, which can take up to 1 minute to complete" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor2 $writeEmptyLine
+    az upgrade 2>nul
+}
+
+# Enable Azure CLI auto-upgrade
+# az config set auto-upgrade.enable=yes
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
