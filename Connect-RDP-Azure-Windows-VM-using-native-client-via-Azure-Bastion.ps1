@@ -15,7 +15,7 @@ Change the current context to the subscription holding the Azure Bastion host.
 Save the Bastion host as a variable.
 Change the current context to the specified subscription holding the target VM.
 RDP to the target VM using the native client through Azure Bastion.
-Remote Desktop File conn.rdp will be removed when the RDP connection is terminated.
+Remote Desktop File "conn.rdp" will be removed when the RDP connection is terminated.
 
 .NOTES
 
@@ -135,7 +135,7 @@ Write-Host ($writeEmptyLine + "# Please use the correct credentials to log in to
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Remote Desktop File conn.rdp will be removed when the RDP connection is terminated
+## Remote Desktop File "conn.rdp" will be removed when the RDP connection is terminated
 
 Get-ChildItem | Where-Object Name -Like $rdpFileName | ForEach-Object { Remove-Item -LiteralPath $_.Name }
 
