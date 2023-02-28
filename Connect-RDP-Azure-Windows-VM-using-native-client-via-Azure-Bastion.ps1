@@ -15,6 +15,7 @@ Change the current context to the subscription holding the Azure Bastion host.
 Save the Bastion host as a variable.
 Change the current context to the specified subscription holding the target VM.
 RDP to the target VM using the native client through Azure Bastion.
+Remove the conn.rdp file.
 
 .NOTES
 
@@ -134,7 +135,7 @@ Write-Host ($writeEmptyLine + "# Please use the correct credentials to log in to
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Remove conn.rdp file
+## Remove the conn.rdp file
 
 Get-ChildItem | Where-Object Name -Like $rdpFileName | ForEach-Object { Remove-Item -LiteralPath $_.Name }
 
