@@ -20,9 +20,9 @@ RDP to the target VM using the native client through Azure Bastion.
 
 Filename:       Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1
 Created:        26/02/2023
-Last modified:  26/02/2023
+Last modified:  28/02/2023
 Author:         Wim Matthyssen
-Version:        1.0
+Version:        1.2
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
 CLI:            Azure CLI
@@ -130,6 +130,15 @@ $vm = Get-AzVM -Name $vmName
 az network bastion rdp --name $bastion.Name --resource-group $bastion.ResourceGroupName --target-resource-id $vm.Id --output none --only-show-errors
 
 Write-Host ($writeEmptyLine + "# Please use the correct credentials to log in to the open Remote Desktop connection" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Remove conn.rdp file
+
+Get-ChildItem | Where-Object Name -Like $rdpFileName | ForEach-Object { Remove-Item -LiteralPath $_.Name }
+
+Write-Host ($writeEmptyLine + "# Remote Destkop File $rdpFileName removed" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
