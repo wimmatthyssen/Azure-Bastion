@@ -60,6 +60,8 @@ param(
 
 ## Variables
 
+$rdpFileName = "conn.rdp"
+
 $global:currenttime= Set-PSBreakpoint -Variable currenttime -Mode Read -Action {$global:currenttime= Get-Date -UFormat "%A %m/%d/%Y %R"}
 $foregroundColor1 = "Red"
 $foregroundColor2 = "Yellow"
