@@ -8,9 +8,10 @@ A script used to switch an Azure Bastion host with Standard SKU to the Basic SKU
 A script used to switch an Azure Bastion host with Standard SKU to the Basic SKU.
 The script will do all of the following:
 
-Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
-Suppress breaking change warning messages.
-Create Bastion resource variable for later use.
+Check if PowerShell runs as Administrator when not running from Cloud Shell; otherwise, exit the script.
+Remove the breaking change warning messages.
+Save the Bastion host as a variable and check if it uses the Basic SKU; if so, exit the script, otherwise the script will continue.
+Check if the Bastion resource group has a resource lock; if so, exit the script.
 Store the specified set of Azure Bastion host tags in a hash table.
 Delete Azure Bastion host with Standard SKU.
 Redeploy same Azure Bastion host with Basic SKU.
@@ -23,13 +24,13 @@ Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 Filename:       Switch-AzureBastion-Standard-SKU-to-Basic-SKU.ps1
 Created:        04/10/2022
-Last modified:  06/10/2022
+Last modified:  01/03/2023
 Author:         Wim Matthyssen
-Version:        1.2
+Version:        2.0
 PowerShell:     Azure Cloud Shell or Azure PowerShell
 Requires:       PowerShell Az (v8.1.0) and Az.Network (v4.18.0)
 Action:         Change variables were needed to fit your needs. 
-Disclaimer:     This script is provided "As Is" with no warranties.
+Disclaimer:     This script is provided "as is" with no warranties.
 
 .EXAMPLE
 
@@ -69,47 +70,77 @@ $writeSeperatorSpaces = " - "
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Check if PowerShell runs as Administrator (when not running from Cloud Shell), otherwise exit the script
+## Check if PowerShell runs as Administrator when not running from Cloud Shell; otherwise, exit the script
+
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdministrator = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if ($PSVersionTable.Platform -eq "Unix") {
     Write-Host ($writeEmptyLine + "# Running in Cloud Shell" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine
     
-    ## Start script execution    
-    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it can take up to 14 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine 
+    # Begin script execution
+    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 14 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine    
 } else {
-    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    $isAdministrator = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-        ## Check if running as Administrator, otherwise exit the script
-        if ($isAdministrator -eq $false) {
+    # Check if you are running PowerShell as an administrator; otherwise, return the script
+    if ($isAdministrator -eq $false) {
         Write-Host ($writeEmptyLine + "# Please run PowerShell as Administrator" + $writeSeperatorSpaces + $currentTime)`
-        -foregroundcolor $foregroundColor1 $writeEmptyLine
+        -foregroundcolor $foregroundColor3 $writeEmptyLine
         Start-Sleep -s 3
-        exit
-        }
-        else {
-
-        ## If running as Administrator, start script execution    
-        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it can take up to 14 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+        Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
+        -foregroundcolor $foregroundColor1 $writeEmptyLine;
+        $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
+        return
+    } else {
+        # Begin script execution if you are running as Administrator 
+        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 14 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
         -foregroundcolor $foregroundColor1 $writeEmptyLine 
-        }
+    }
 }
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Suppress breaking change warning messages
+## Remove the breaking change warning messages.
 
 Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create Bastion resource variable
+## Save the Bastion host as a variable and check if it uses the Basic SKU; if so, exit the script, otherwise the script will continue
 
 $bastion = Get-AzBastion | Where-Object Name -Match $bastionName
 
-Write-Host ($writeEmptyLine + "# Bastion variable created" + $writeSeperatorSpaces + $currentTime)`
+if ($bastion.SkuText.Contains("Basic")) {
+    Write-Host ($writeEmptyLine + "# Bastion host already using the Basic SKU" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor3 $writeEmptyLine
+    Start-Sleep -s 3
+    Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine;
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
+    return
+}
+
+Write-Host ($writeEmptyLine + "# Bastion host variable created" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Check if the Bastion resource group has a resource lock; if so, exit the script
+
+$lock = Get-AzResourceLock -ResourceGroupName $bastion.ResourceGroupName
+
+if ($null -ne $lock){
+    Write-Host ($writeEmptyLine + "# Bastion resource group has a resource lock; please remove it and rerun the script" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor3 $writeEmptyLine
+    Start-Sleep -s 3
+    Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine;
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
+    return
+    } 
+
+Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion has no resource lock; the script will continue" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -154,7 +185,6 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName with $bastionSkuBasic
 
 ## Lock the Azure Bastion resource group with a CanNotDelete lock
 
-$rgNameBastion = $bastion.ResourceGroupName
 $lock = Get-AzResourceLock -ResourceGroupName $bastion.ResourceGroupName
 
 if ($null -eq $lock){
