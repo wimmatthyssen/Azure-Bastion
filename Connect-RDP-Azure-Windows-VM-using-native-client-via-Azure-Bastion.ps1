@@ -9,7 +9,7 @@ A script used to RDP to a target Azure Windows VM using Tunneling from Azure Bas
 A script used to RDP to a target Azure Windows VM using Tunneling from Azure Bastion with Azure CLI and PowerShell.
 The script will do all of the following:
 
-Check if the PowerShell window is running as Administrator (when not running from Cloud Shell); otherwise, the Azure PowerShell script will be exited.
+Check if the PowerShell window is running as Administrator; otherwise, the Azure PowerShell script will be exited.
 Remove the breaking change warning messages.
 Check if Azure CLI is already installed and, if required, update it to the latest version. If Azure CLI is not installed, install it.
 Change the current context to the subscription holding the Azure Bastion host.
