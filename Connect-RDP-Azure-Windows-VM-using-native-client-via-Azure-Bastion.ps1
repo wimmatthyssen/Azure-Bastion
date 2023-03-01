@@ -86,7 +86,7 @@ if ($isAdministrator -eq $false) {
     Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine;
     $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
-    exit
+    return
 } else {
     # Begin script execution if you are running as Administrator 
     Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 1 minute to complete" + $writeSeperatorSpaces + $currentTime)`
@@ -153,7 +153,7 @@ if ($bastion.SkuText.Contains("Basic")) {
     Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine;
     $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
-    exit
+    return
 }
 
 Write-Host ($writeEmptyLine + "# Bastion host variable created" + $writeSeperatorSpaces + $currentTime)`
@@ -183,7 +183,7 @@ if (-not $vmObject) {
     Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine;
     $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
-    exit
+    return
 }
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
