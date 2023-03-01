@@ -11,11 +11,10 @@ The script will do all of the following:
 
 Check if the PowerShell window is running as Administrator (when not running from Cloud Shell); otherwise, the Azure PowerShell script will be exited.
 Remove the breaking change warning messages.
-Check if Azure CLI is installed; otherwise, install it.
+Check if Azure CLI is already installed and, if required, update it to the latest version. If Azure CLI is not installed, install it.
 Change the current context to the subscription holding the Azure Bastion host.
-Save the Bastion host as a variable.
-Check if the Standard SKU tier for Azure Bastion is in use; otherwise, exit the script.
-Change the current context to the specified subscription holding the target VM.
+Save the Bastion host as a variable and check if it uses the Standard SKU; otherwise, exit the script.
+Validate if the target VM exists, and if so, find the subscription it belongs to; otherwise, exit the script.
 RDP to the target VM using the native client through Azure Bastion.
 Remote Desktop File conn.rdp will be removed when the RDP connection is terminated.
 
@@ -23,9 +22,9 @@ Remote Desktop File conn.rdp will be removed when the RDP connection is terminat
 
 Filename:       Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1
 Created:        26/02/2023
-Last modified:  28/02/2023
+Last modified:  01/03/2023
 Author:         Wim Matthyssen
-Version:        1.4
+Version:        2.0
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
 CLI:            Azure CLI
@@ -52,8 +51,6 @@ https://wmatthyssen.com/2023/02/27/connecting-to-an-azure-windows-vm-using-an-az
 ## Parameters
 
 param(
-    # $subscriptionName -> Name of the subscription of the target Azure Windows VM
-    [parameter(Mandatory =$true)][ValidateNotNullOrEmpty()] [string] $subscriptionName,
     # $vmName -> Name of the target Azure Windows VM
     [parameter(Mandatory =$true)][ValidateNotNullOrEmpty()] [string] $vmName
 )
@@ -62,11 +59,15 @@ param(
 
 ## Variables
 
+$allSubscriptions = Get-AzSubscription
+$subscriptionNameVM = ""
+$vmObject = $null
 $rdpFileName = "conn.rdp"
 
 $global:currenttime= Set-PSBreakpoint -Variable currenttime -Mode Read -Action {$global:currenttime= Get-Date -UFormat "%A %m/%d/%Y %R"}
-$foregroundColor1 = "Red"
+$foregroundColor1 = "Green"
 $foregroundColor2 = "Yellow"
+$foregroundColor3 = "Red"
 $writeEmptyLine = "`n"
 $writeSeperatorSpaces = " - "
 
@@ -80,8 +81,11 @@ $isAdministrator = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltIn
 # Check if you are running PowerShell as an administrator; otherwise, exit the script
 if ($isAdministrator -eq $false) {
     Write-Host ($writeEmptyLine + "# Please run PowerShell as Administrator" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine
+    -foregroundcolor $foregroundColor3 $writeEmptyLine
     Start-Sleep -s 3
+    Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine;
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
     exit
 } else {
     # Begin script execution if you are running as Administrator 
@@ -97,18 +101,28 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Check if Azure CLI is installed; otherwise, install it
+## Check if Azure CLI is already installed and, if required, update it to the latest version. If Azure CLI is not installed, install it 
 
-if ($null -eq (az version)) {
-    Write-Host ($writeEmptyLine + "# Azure CLI is now being installed, it will need around 2 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor2 $writeEmptyLine 
-    Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi
-    Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'
-    Remove-Item .\AzureCLI.msi
-} else {
-    Write-Host ($writeEmptyLine + "# Azure CLI is installed. If needed, it will be upgraded, which can take up to 1 minute to complete" + $writeSeperatorSpaces + $currentTime)`
+try {
+    if ($null -ne (az version)) {
+        Write-Host ($writeEmptyLine + "# If needed, the Azure CLI will be updated to the latest version, which can take a few minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+        -foregroundcolor $foregroundColor2 $writeEmptyLine
+        az upgrade --yes 2>nul
+    }
+} catch {
+    if ($error[0].ToString() -match "The term 'az' is not recognized as a name of a cmdlet") {
+        Write-Host ($writeEmptyLine + "# Azure CLI is not installed. To proceed, it will now be installed, which can take up to 2 minutes" + $writeSeperatorSpaces + $currentTime)`
+        -foregroundcolor $foregroundColor2 $writeEmptyLine
+        
+        # Install Azure CLI with MSI
+        $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri https://aka.ms/installazurecliwindows -OutFile .\AzureCLI.msi; 
+        Start-Process msiexec.exe -Wait -ArgumentList '/I AzureCLI.msi /quiet'; 
+        Remove-Item .\AzureCLI.msi
+        }
+}
+Finally {
+    Write-Host ($writeEmptyLine + "# Azure CLI is installed and running the latest version" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
-    az upgrade 2>nul
 }
 
 # Enable Azure CLI auto-upgrade
@@ -128,27 +142,55 @@ Write-Host ($writeEmptyLine + "# Bastion host subscription in current tenant sel
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Save the Bastion host as a variable
+## Save the Bastion host as a variable and check if it uses the Standard SKU; otherwise, exit the script
 
 $bastion = Get-AzBastion
+
+if ($bastion.SkuText.Contains("Basic")) {
+    Write-Host ($writeEmptyLine + "# Bastion host runs with the Basic SKU, please upgrade to Standard SKU" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor3 $writeEmptyLine
+    Start-Sleep -s 3
+    Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine;
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
+    exit
+}
 
 Write-Host ($writeEmptyLine + "# Bastion host variable created" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Change the current context to the specified subscription holding the target VM
+## Validate if the target VM exists, and if so, find the subscription it belongs to; otherwise, exit the script
 
-Set-AzContext -Subscription $subscriptionName | Out-Null
+if ($allSubscriptions){
+    foreach ($subscription in $allSubscriptions){
+        Set-AzContext -Subscription $Subscription.Name | Out-Null
+        $vmObject = Get-AzVM -Name $vmName
+        if ($vmObject) {
+            $subscriptionNameVM = $subscription.Name
+            Write-Host ($writeEmptyLine + "# Target VM found in subscription $subscriptionNameVM" + $writeSeperatorSpaces + $currentTime)`
+            -foregroundcolor $foregroundColor2 $writeEmptyLine
+            break 
+        }
+    }
+}
 
-Write-Host ($writeEmptyLine + "# Target VM subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
--foregroundcolor $foregroundColor2 $writeEmptyLine
+if (-not $vmObject) {
+    Write-Host ($writeEmptyLine + "# VM not found" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor3 $writeEmptyLine
+    Start-Sleep -s 3
+    Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine;
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
+    exit
+}
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## RDP to the target VM using the native client through Azure Bastion
 
-Write-Host ($writeEmptyLine + "# Setting up remote desktop connection to VM with name $vmName " + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Setting up remote desktop connection to target VM $vmName" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 $vm = Get-AzVM -Name $vmName
@@ -161,7 +203,7 @@ Write-Host ($writeEmptyLine + "# Please use the correct credentials to log in to
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Remote Desktop File "conn.rdp" will be removed when the RDP connection is terminated
+## Remote Desktop File conn.rdp will be removed when the RDP connection is terminated
 
 Get-ChildItem | Where-Object Name -Like $rdpFileName | ForEach-Object { Remove-Item -LiteralPath $_.Name }
 
