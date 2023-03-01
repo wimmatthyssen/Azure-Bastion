@@ -10,7 +10,7 @@ The script will do all of the following:
 
 Check if PowerShell runs as Administrator when not running from Cloud Shell; otherwise, exit the script.
 Remove the breaking change warning messages.
-Save the Bastion host as a variable and check if it uses the Basic SKU; if so, exit the script, otherwise the script will continue.
+Save the Bastion host if it exists in the subscription as a variable and check if it uses the Basic SKU; if so, exit the script, otherwise the script will continue.
 Check if the Bastion resource group has a resource lock; if so, exit the script.
 Store the specified set of Azure Bastion host tags in a hash table.
 Delete Azure Bastion host with Standard SKU.
@@ -63,8 +63,9 @@ param(
 $bastionSkuBasic = "Basic"
 
 $global:currenttime= Set-PSBreakpoint -Variable currenttime -Mode Read -Action {$global:currenttime= Get-Date -UFormat "%A %m/%d/%Y %R"}
-$foregroundColor1 = "Red"
+$foregroundColor1 = "Green"
 $foregroundColor2 = "Yellow"
+$foregroundColor3 = "Red"
 $writeEmptyLine = "`n"
 $writeSeperatorSpaces = " - "
 
@@ -107,10 +108,22 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Save the Bastion host as a variable and check if it uses the Basic SKU; if so, exit the script, otherwise the script will continue
+## Save the Bastion host if it exists in the subscription as a variable and check if it uses the Basic SKU; if so, exit the script, otherwise the script will continue
 
 $bastion = Get-AzBastion | Where-Object Name -Match $bastionName
 
+# Check if a Bastion host exists in the subscription; otherwise, exit the script
+if ($null -eq $bastion){
+    Write-Host ($writeEmptyLine + "# No Bastion host exists in the current subscription, please select the correct context and rerun the script" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor3 $writeEmptyLine
+    Start-Sleep -s 3
+    Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine;
+    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
+    return
+} 
+
+# Check if the Bastion host is running the Standard SKU; otherwise, exit the script
 if ($bastion.SkuText.Contains("Basic")) {
     Write-Host ($writeEmptyLine + "# Bastion host already using the Basic SKU" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor3 $writeEmptyLine
@@ -129,6 +142,7 @@ Write-Host ($writeEmptyLine + "# Bastion host variable created" + $writeSeperato
 ## Check if the Bastion resource group has a resource lock; if so, exit the script
 
 $lock = Get-AzResourceLock -ResourceGroupName $bastion.ResourceGroupName
+$rgNameBastion = $bastion.ResourceGroupName
 
 if ($null -ne $lock){
     Write-Host ($writeEmptyLine + "# Bastion resource group has a resource lock; please remove it and rerun the script" + $writeSeperatorSpaces + $currentTime)`
