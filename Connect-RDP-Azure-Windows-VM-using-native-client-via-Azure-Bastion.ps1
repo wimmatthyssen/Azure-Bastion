@@ -37,9 +37,9 @@ Disclaimer:     This script is provided "as is" with no warranties.
 Connect-AzAccount
 Get-AzTenant (if not using the default tenant)
 Set-AzContext -tenantID "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx" (if not using the default tenant)
-.\Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1 <"your target VM Azure subscription name here"> <"your VM name here">
+.\Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1 <"your VM name here">
 
--> Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1 sub-hub-myh-management-01 swpadm025
+-> Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1 swpadm025
 
 .LINK
 
