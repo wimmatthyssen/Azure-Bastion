@@ -59,7 +59,7 @@ param(
 
 ## Variables
 
-$allSubscriptions = Get-AzSubscription
+$allSubscriptions = Get-AzSubscription | Where-Object { "Enabled" -eq $_.State}
 $subscriptionNameVM = ""
 $vmObject = $null
 $rdpFileName = "conn.rdp"
