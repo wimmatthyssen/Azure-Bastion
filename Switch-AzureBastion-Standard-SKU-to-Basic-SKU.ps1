@@ -84,7 +84,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
     -foregroundcolor $foregroundColor1 $writeEmptyLine
     
     # Begin script execution
-    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will take around 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine    
 } else {
     # Check if you are running PowerShell as an administrator; otherwise, return the script
@@ -98,7 +98,7 @@ if ($PSVersionTable.Platform -eq "Unix") {
         return
     } else {
         # Begin script execution if you are running as Administrator 
-        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will take around 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+        Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
         -foregroundcolor $foregroundColor1 $writeEmptyLine 
     }
 }
@@ -107,13 +107,13 @@ if ($PSVersionTable.Platform -eq "Unix") {
 
 ## Remove the breaking change warning messages.
 
-Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
+Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true" | Out-Null
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ## Change the current context to the subscription holding the Azure Bastion host, if the subscription exists; otherwise, exit the script
 
-Get-AzSubscription -SubscriptionName $subscriptionName -ErrorVariable subscriptionNotPresent -ErrorAction SilentlyContinue
+Get-AzSubscription -SubscriptionName $subscriptionName -ErrorVariable subscriptionNotPresent -ErrorAction SilentlyContinue | Out-Null
 
 if ($subscriptionNotPresent) {
     Write-Host ($writeEmptyLine + "# Subscription with name $subscriptionName does not exist in the current tenant" + $writeSeperatorSpaces + $currentTime)`
