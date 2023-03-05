@@ -8,7 +8,6 @@ A script used to switch an Azure Bastion host with Standard SKU to the Basic SKU
 A script used to switch an Azure Bastion host with Standard SKU to the Basic SKU.
 The script will do all of the following:
 
-Check if PowerShell runs as Administrator when not running from Cloud Shell; otherwise, exit the script.
 Remove the breaking change warning messages.
 Change the current context to the subscription holding the Azure Bastion host, if the subscription exists; otherwise, exit the script.
 Save the Bastion host if it exists in the subscription as a variable and check if it uses the Basic SKU; if so, exit the script, otherwise the script will continue.
@@ -25,9 +24,9 @@ Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 Filename:       Switch-AzureBastion-Standard-SKU-to-Basic-SKU.ps1
 Created:        04/10/2022
-Last modified:  03/03/2023
+Last modified:  05/03/2023
 Author:         Wim Matthyssen
-Version:        2.1
+Version:        2.3
 PowerShell:     Azure Cloud Shell or Azure PowerShell
 Requires:       PowerShell Az (v8.1.0) and Az.Network (v4.18.0)
 Action:         Change variables were needed to fit your needs. 
@@ -74,40 +73,16 @@ $writeSeperatorSpaces = " - "
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Check if PowerShell runs as Administrator when not running from Cloud Shell; otherwise, exit the script
+## Remove the breaking change warning messages
 
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-$isAdministrator = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-if ($PSVersionTable.Platform -eq "Unix") {
-    Write-Host ($writeEmptyLine + "# Running in Cloud Shell" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine
-    
-    # Begin script execution
-    Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine    
-} else {
-    # Check if you are running PowerShell as an administrator; otherwise, return the script
-    if ($isAdministrator -eq $false) {
-        Write-Host ($writeEmptyLine + "# Please run PowerShell as Administrator" + $writeSeperatorSpaces + $currentTime)`
-        -foregroundcolor $foregroundColor3 $writeEmptyLine
-        Start-Sleep -s 3
-        Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
-        -foregroundcolor $foregroundColor1 $writeEmptyLine;
-        $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
-        return
-    } else {
-        # Begin script execution if you are running as Administrator 
-        Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
-        -foregroundcolor $foregroundColor1 $writeEmptyLine 
-    }
-}
+Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true" | Out-Null
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Remove the breaking change warning messages.
+## Write script started
 
-Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true" | Out-Null
+Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor1 $writeEmptyLine 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
