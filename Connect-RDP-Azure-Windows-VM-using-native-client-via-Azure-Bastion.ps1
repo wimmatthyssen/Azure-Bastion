@@ -9,11 +9,11 @@ A script used to RDP to a target Azure Windows VM using Tunneling from Azure Bas
 A script used to RDP to a target Azure Windows VM using Tunneling from Azure Bastion with Azure CLI and PowerShell.
 The script will do all of the following:
 
-Check if the PowerShell window is running as Administrator; otherwise, the Azure PowerShell script will be exited.
 Remove the breaking change warning messages.
 Check if Azure CLI is already installed and, if required, update it to the latest version. If Azure CLI is not installed, install it.
 Change the current context to the subscription holding the Azure Bastion host.
 Save the Bastion host as a variable and check if it uses the Standard SKU; otherwise, exit the script.
+Update the Bastion host to enable native client support, if not already enabled.
 Validate if the target VM exists, and if so, find the subscription it belongs to; otherwise, exit the script.
 RDP to the target VM using the native client through Azure Bastion.
 Remote Desktop File conn.rdp will be removed when the RDP connection is terminated.
@@ -22,9 +22,9 @@ Remote Desktop File conn.rdp will be removed when the RDP connection is terminat
 
 Filename:       Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1
 Created:        26/02/2023
-Last modified:  01/03/2023
+Last modified:  06/03/2023
 Author:         Wim Matthyssen
-Version:        2.0
+Version:        2.3
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
 CLI:            Azure CLI
@@ -73,31 +73,16 @@ $writeSeperatorSpaces = " - "
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Check if PowerShell runs as Administrator; otherwise, exit the script
-
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-$isAdministrator = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-# Check if you are running PowerShell as an administrator; otherwise, exit the script
-if ($isAdministrator -eq $false) {
-    Write-Host ($writeEmptyLine + "# Please run PowerShell as Administrator" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor3 $writeEmptyLine
-    Start-Sleep -s 3
-    Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine;
-    $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
-    return
-} else {
-    # Begin script execution if you are running as Administrator 
-    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 1 minute to complete" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine 
-}
-
-## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 ## Remove the breaking change warning messages
 
 Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Write script started
+
+Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor1 $writeEmptyLine 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -132,10 +117,9 @@ Finally {
 
 ## Change the current context to the subscription holding the Azure Bastion host
 
-#<your subscription value hare> Replace with the name value of your Azure Bastion subscription. Example: "management" -> {$_.Name -like "*management"*"} 
-$subNameBastion = Get-AzSubscription | Where-Object {$_.Name -like "*<your subscription value here>*"} 
+$subcriptionNameBastion = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
 
-Set-AzContext -SubscriptionId $subNameBastion.SubscriptionId | Out-Null 
+Set-AzContext -SubscriptionId $subcriptionNameBastion.SubscriptionId | Out-Null 
 
 Write-Host ($writeEmptyLine + "# Bastion host subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
@@ -157,6 +141,22 @@ if ($bastion.SkuText.Contains("Basic")) {
 }
 
 Write-Host ($writeEmptyLine + "# Bastion host variable created" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Update the Bastion host to enable native client support, if not already enabled
+
+# Set Azure CLI core configuration to only show errors
+az config set core.only_show_errors=yes --output none --only-show-errors
+
+if ((az network bastion show --name $bastion.Name --resource-group $bastion.ResourceGroupName --query "enableTunneling") -ne $true)  {
+    Write-Host ($writeEmptyLine + "# Native client support is not enabled. To proceed, it will now be enabled, which can take up to 6 minutes" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor2 $writeEmptyLine
+    az network bastion update --name $bastion.Name --resource-group $bastion.ResourceGroupName --enable-tunneling 
+} 
+
+Write-Host ($writeEmptyLine + "# Bastion host has native client support enabled" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -183,7 +183,7 @@ if (-not $vmObject) {
     Write-Host -NoNewLine ("# Press any key to exit the script ..." + $writeEmptyLine)`
     -foregroundcolor $foregroundColor1 $writeEmptyLine;
     $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") | Out-Null;
-    return
+    return 
 }
 
 ## ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -196,7 +196,10 @@ Write-Host ($writeEmptyLine + "# Setting up remote desktop connection to target 
 $vm = Get-AzVM -Name $vmName
 
 # Azure CLI
-az network bastion rdp --name $bastion.Name --resource-group $bastion.ResourceGroupName --target-resource-id $vm.Id --output none --only-show-errors
+az network bastion rdp --name $bastion.Name --resource-group $bastion.ResourceGroupName --target-resource-id $vm.Id 
+
+# Set Azure CLI core configuration only show errors to no
+az config set core.only_show_errors=no --output none --only-show-errors
 
 Write-Host ($writeEmptyLine + "# Please use the correct credentials to log in to the open Remote Desktop connection" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
