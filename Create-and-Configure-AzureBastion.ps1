@@ -16,7 +16,7 @@ Store a specified set of tags in a hash table.
 Register Insights provider in order for flow logging to work, if not already registered. Registration may take up to 10 minutes.
 If it does not already exist, create a resource group for the storage account that will store the NSG flow log data.
 If it does not already exist, create a general-purpose v2 storage account for storing the flow logs with specific configuration settings. Also apply the necessary tags to this storage account.
-Create a resource group for the Azure Bastion resources if one does not already exist. Add the specified tags and lock them with a CanNotDelete lock.
+Create a resource group for the Azure Bastion resources if one does not already exist. Add the specified tags.
 Create the AzureBastionSubnet with the network security group if it does not already exist. Add the required inbound and outbound security rules. Add specified tags and diagnostic settings.
 Create a  Public IP address (PIP) with the Standard SKU for the Bastion host if it does not exist. Add specified tags and diagnostic settings.
 Enable NSG Flow logs (Version 2) and Traffic Analytics for the AzureBastionSubnet NSG.
@@ -238,7 +238,7 @@ Write-Host ($writeEmptyLine + "# Storage account $storageAccountName created" + 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create a resource group for the Azure Bastion resources if one does not already exist. Add the specified tags and lock them with a CanNotDelete lock
+## Create a resource group for the Azure Bastion resources if one does not already exist. Add the specified tags
 
 try {
     Get-AzResourceGroup -Name $rgNameBastion -ErrorAction Stop | Out-Null
