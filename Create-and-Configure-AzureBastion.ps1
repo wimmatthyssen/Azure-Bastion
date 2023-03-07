@@ -122,7 +122,7 @@ Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
 
 ## Write script started
 
-Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 9 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor1 $writeEmptyLine 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
