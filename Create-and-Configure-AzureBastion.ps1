@@ -8,19 +8,17 @@ A script used to create and configure Azure Bastion within the HUB spoke VNet.
 A script used to create and configure Azure Bastion (basic SKU) within the HUB spoke VNet in a management subscription.
 The script will do all of the following:
 
-Check if the PowerShell window is running as Administrator (when not running from Cloud Shell), otherwise the Azure PowerShell script will be exited.
-Suppress breaking change warning messages.
+Remove the breaking change warning messages.
+Check if a Bastion host exists in the environment; if so, ask the user if the script needs to continue or needs to exit.
 Change the current context to use a management subscription (a subscription with *management* in the subscription name will be automatically selected).
 Save the Log Analytics workspace from the management subscription in a variable.
 Store a specified set of tags in a hash table.
 Register Insights provider in order for flow logging to work, if not already registered. Registration may take up to 10 minutes.
-Create a resource group for the storage account which will store the NSG flow log data, if it not already exists.
-Create a general purpose v2 storage account for storing the flow logs with specific configuration settings, if it not already exists. Also apply the necessary tags to this storage account.
-Create a resource group for the Azure Bastion resources if it not already exists. Also apply the necessary tags to this resource group.
-Create the AzureBastionSubnet with an associated network security group (NSG), if it not already exists. 
-The NSG itself will contain all the required inbound and outbound security rules. If the AzureBastionSubnet exists but does not have an associated NSG, it will attach the newly created NSG. 
-The AzureBastionSubnet at least must have a subnet size of /26 or larger. * Also apply the necessary tags and diagnostic settings to the NSG.
-Create a Standard SKU PIP for the Bastion host, if it not already exists. Also apply the necessary tags and diagnostic settings to this PIP.
+If it does not already exist, create a resource group for the storage account that will store the NSG flow log data.
+If it does not already exist, create a general-purpose v2 storage account for storing the flow logs with specific configuration settings. Also apply the necessary tags to this storage account.
+Create a resource group for the Azure Bastion resources if one does not already exist. Add the specified tags and lock them with a CanNotDelete lock.
+Create the AzureBastionSubnet with the network security group if it does not already exist. Add the required inbound and outbound security rules. Add specified tags and diagnostic settings.
+Create a  Public IP address (PIP) with the Standard SKU for the Bastion host if it does not exist. Add specified tags and diagnostic settings.
 Enable NSG Flow logs (Version 2) and Traffic Analytics for the AzureBastionSubnet NSG.
 Create the Bastion host (Basic SKU), if it not already exists. Keep in mind that it can take up to 9 minutes for the Bastion host to be deployed. Also apply the necessary tags to the Bastion host.
 Set the diagnostic settings (log and metrics) for the bastion resource if they don’t exist.
@@ -30,13 +28,13 @@ Lock the Azure Bastion resource group with a CanNotDelete lock.
 
 Filename:       Create-and-Configure-AzureBastion.ps1
 Created:        01/06/2021
-Last modified:  17/10/2022
+Last modified:  07/03/2023
 Author:         Wim Matthyssen
-Version:        3.0
+Version:        3.2
 PowerShell:     Azure PowerShell and Azure Cloud Shell
 Requires:       PowerShell Az (v5.9.0) and Az.Network (v4.7.0)
 Action:         Change variables were needed to fit your needs. 
-Disclaimer:     This script is provided "As Is" with no warranties.
+Disclaimer:     This script is provided "as is" with no warranties.
 
 .EXAMPLE
 
@@ -77,7 +75,7 @@ $trafficAnalyticsInterval = "60"
 $vnetName = #<your VNet name here> The existing VNet in which the Bastion resource will be created. Example: "vnet-hub-myh-weu-01"
 $subnetNameBastion = "AzureBastionSubnet"
 $subnetAddressBastion = #<your AzureBastionSubnet range here> The subnet must have a minimum subnet size of /26. Example: "10.1.1.128/26"
-$nsgBastionName = #<your AzureBastionSubnet NSG name here> The name of the NSG associated with the AzureBastionSubnet. Example: "nsg-AzureBastionSubnet"
+$nsgNameBastion = #<your AzureBastionSubnet NSG name here> The name of the NSG associated with the AzureBastionSubnet. Example: "nsg-AzureBastionSubnet"
 $nsgBastionDiagnosticsName = #<your NSG Bastion Diagnostics settings name here> The name of the NSG diagnostic settings for Bastion. Example: "diag-nsg-AzureBastionSubnet"
 
 $bastionName = #<your Bastion name here> The name of the new Bastion resource. Example: "bas-hub-myh-01"
@@ -90,6 +88,9 @@ $pipSkuBastion = "Standard"
 $pipTierBastion = "Regional"
 $pipIpAddressVersionBastion = "IPv4"
 $pipBastionDiagnosticsName = #<your PIP Bastion Diagnostics settings name here> The name of the PIP diagnostic settings for Bastion. Example: "diag-pip-bas-hub-myh-01"
+
+$log = @()
+$metric = @()
 
 $tagSpokeName = #<your environment tag name here> The environment tag name you want to use. Example:"Env"
 $tagSpokeValue = "$($spoke[0].ToString().ToUpper())$($spoke.SubString(1))"
@@ -106,46 +107,46 @@ $tagSkuName = "Sku"
 $tagSkuValue = $storageAccountSkuName
 
 $global:currenttime= Set-PSBreakpoint -Variable currenttime -Mode Read -Action {$global:currenttime= Get-Date -UFormat "%A %m/%d/%Y %R"}
-$foregroundColor1 = "Red"
+$foregroundColor1 = "Green"
 $foregroundColor2 = "Yellow"
 $writeEmptyLine = "`n"
 $writeSeperatorSpaces = " - "
 
-## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Check if PowerShell runs as Administrator (when not running from Cloud Shell), otherwise exit the script
-
-if ($PSVersionTable.Platform -eq "Unix") {
-    Write-Host ($writeEmptyLine + "# Running in Cloud Shell" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine
-    
-    ## Start script execution    
-    Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
-    -foregroundcolor $foregroundColor1 $writeEmptyLine 
-} else {
-    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-    $isAdministrator = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
-        ## Check if running as Administrator, otherwise exit the script
-        if ($isAdministrator -eq $false) {
-        Write-Host ($writeEmptyLine + "# Please run PowerShell as Administrator" + $writeSeperatorSpaces + $currentTime)`
-        -foregroundcolor $foregroundColor1 $writeEmptyLine
-        Start-Sleep -s 3
-        exit
-        }
-        else {
-
-        ## If running as Administrator, start script execution    
-        Write-Host ($writeEmptyLine + "# Script started. Without any errors, it will need around 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
-        -foregroundcolor $foregroundColor1 $writeEmptyLine 
-        }
-}
-
-## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-## Suppress breaking change warning messages
+## Remove the breaking change warning messages
 
 Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Write script started
+
+Write-Host ($writeEmptyLine + "# Script started. Without errors, it can take up to 19 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor1 $writeEmptyLine 
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+## Check if a Bastion host exists in the environment; if so, ask the user if the script needs to continue or needs to exit
+
+$bastionObject = Get-AzBastion 
+
+# Check if a Bastion host exists in the subscription; otherwise, exit the script
+if ($null -eq $bastionObject){
+    Write-Host ($writeEmptyLine + "# No Bastion host exists in the current environment; the script will continue" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor2 $writeEmptyLine
+} else {
+    Write-Host ($writeEmptyLine + "# A Bastion host already exists in the current environment" + $writeSeperatorSpaces + $currentTime)`
+    -foregroundcolor $foregroundColor2 $writeEmptyLine
+    Start-Sleep -s 3
+    Write-Host ($writeEmptyLine + "# Press 'Y' to continue the script, otherwise press 'N' to exit the script" + $writeEmptyLine)`
+    -foregroundcolor $foregroundColor1 $writeEmptyLine;
+    $response = Read-Host
+    if ( $response -ne "Y" ) { 
+    Write-Host $writeEmptyLine
+    return 
+    }
+}
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -188,7 +189,7 @@ Write-Host ($writeEmptyLine + "# Microsoft.Insights resource provider currently 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create a resource group for the storage account which will store the flow logs, if it not already exists
+## If it does not already exist, create a resource group for the storage account that will store the NSG flow log data.
 
 try {
     Get-AzResourceGroup -Name $rgNameStorage -ErrorAction Stop | Out-Null 
@@ -210,7 +211,8 @@ Write-Host ($writeEmptyLine + "# Resource group $rgNameStorage available" + $wri
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create a general purpose v2 storage account for storing the flow logs with specific configuration settings, if it not already exists. Also apply the necessary tags to this storage account.
+## If it does not already exist, create a general-purpose v2 storage account for storing the flow logs with specific configuration settings. 
+## Also apply the necessary tags to this storage account.
 
 try {
     Get-AzStorageAccount -ResourceGroupName $rgNameStorage -Name $storageAccountName -ErrorAction Stop | Out-Null 
@@ -236,7 +238,7 @@ Write-Host ($writeEmptyLine + "# Storage account $storageAccountName created" + 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create a resource group for the Azure Bastion resources if it not already exists. Add specified tags and lock with a CanNotDelete lock
+## Create a resource group for the Azure Bastion resources if one does not already exist. Add the specified tags and lock them with a CanNotDelete lock
 
 try {
     Get-AzResourceGroup -Name $rgNameBastion -ErrorAction Stop | Out-Null
@@ -258,7 +260,7 @@ Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion available" + $wri
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create the AzureBastionSubnet with the network security group, if it not already exists. Add the required inbound and outbound security rules. Add specified tags and diagnostic settings
+## Create the AzureBastionSubnet with the network security group if it does not already exist. Add the required inbound and outbound security rules. Add specified tags and diagnostic settings
 
 # Inbound rules
 
@@ -318,27 +320,28 @@ $outboundRule6 = New-AzNetworkSecurityRuleConfig -Name "Deny_Any_Other_Traffic_O
 # Create the NSG if it does not exist
 
 try {
-    Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking -ErrorAction Stop | Out-Null 
+    Get-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNameNetworking -ErrorAction Stop | Out-Null 
 } catch {
-    New-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking -Location $region `
+    New-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNameNetworking -Location $region `
     -SecurityRules $inboundRule1,$inboundRule2,$inboundRule3,$inboundRule4,$inboundRule5,$inboundRule6,$outboundRule1,$outboundRule2,$outboundRule3,$outboundRule4,$outboundRule5,`
     $outboundRule6 -Force | Out-Null 
 }
 
 # Set tags NSG
-$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking
+$nsg = Get-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNameNetworking
 $nsg.Tag = $tagsBastion
 Set-AzNetworkSecurityGroup -NetworkSecurityGroup $nsg | Out-Null
 
-Write-Host ($writeEmptyLine + "# NSG $nsgBastionName available" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# NSG $nsgNameBastion available" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 # Set the log settings for the NSG if they don't exist
+$log += New-AzDiagnosticSettingLogSettingsObject -CategoryGroup allLogs -Enabled $true | Out-Null
+
 try {
     Get-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -ErrorAction Stop | Out-Null
 } catch { 
-    Set-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -Category NetworkSecurityGroupEvent,NetworkSecurityGroupRuleCounter -Enabled $true `
-    -WorkspaceId ($workSpace.ResourceId) | Out-Null
+    New-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -Log $log -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
 # Create the AzureBastionSubnet if it does not exist
@@ -352,18 +355,18 @@ try {
     $vnet | Set-AzVirtualNetwork | Out-Null 
 }
 
-# Attach the NSG to the AzureBastionSubnet (also if the AzureBastionSubnet exists and misses and NSG)
+# Attach the NSG to the AzureBastionSubnet (also if the AzureBastionSubnet exists but lacks an NSG)
 $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet
-$nsg = Get-AzNetworkSecurityGroup -Name $nsgBastionName -ResourceGroupName $rgNameNetworking
+$nsg = Get-AzNetworkSecurityGroup -Name $nsgNameBastion -ResourceGroupName $rgNameNetworking
 $subnet.NetworkSecurityGroup = $nsg
 $vnet | Set-AzVirtualNetwork | Out-Null 
 
-Write-Host ($writeEmptyLine + "# Subnet $subnetNameBastion available with attached NSG $nsgBastionName" + $writeSeperatorSpaces + $currentTime)`
+Write-Host ($writeEmptyLine + "# Subnet $subnetNameBastion available with attached NSG $nsgNameBastion" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Create a Public IP Address (PIP) for the Bastion host if it does not exist. Add specified tags and diagnostic settings
+## Create a  Public IP address (PIP) with the Standard SKU for the Bastion host if it does not exist. Add specified tags and diagnostic settings
 
 try {
     Get-AzPublicIpAddress -Name $pipNameBastion -ResourceGroupName $rgNameBastion -ErrorAction Stop | Out-Null 
@@ -381,7 +384,7 @@ Set-AzPublicIpAddress -PublicIpAddress $pipBastion | Out-Null
 try {
     Get-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -ErrorAction Stop | Out-Null
 } catch {   
-    Set-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -Category DDoSProtectionNotifications,DDoSMitigationFlowLogs,DDoSMitigationReports `
+    New-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -Category DDoSProtectionNotifications,DDoSMitigationFlowLogs,DDoSMitigationReports `
     -MetricCategory AllMetrics -Enabled $true -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
@@ -409,7 +412,7 @@ Write-Host ($writeEmptyLine + "# NSG FLow logs and Traffic Analytics for $($nsg.
 try {
     Get-AzBastion -ResourceGroupName $rgNameBastion -Name $bastionName -ErrorAction Stop | Out-Null 
 } catch {
-    Write-Host ($writeEmptyLine + "# Bastion host deployment started; this can take up to 9 minutes" + $writeSeperatorSpaces + $currentTime)`
+    Write-Host ($writeEmptyLine + "# Bastion host deployment has started; this can take up to 9 minutes" + $writeSeperatorSpaces + $currentTime)`
     -foregroundcolor $foregroundColor2 $writeEmptyLine
 
     $vnet = Get-AzVirtualNetwork -Name $vnetName -ResourceGroupname $rgNameNetworking
@@ -430,11 +433,12 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSe
 
 ## Set the log and metrics settings for the bastion resource if they don't exist
 
+$metric += New-AzDiagnosticSettingMetricSettingsObject -Category AllMetrics -Enabled $true | Out-Null
+
 try {
     Get-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -ErrorAction Stop | Out-Null
 } catch {    
-    Set-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -Category BastionAuditLogs -MetricCategory AllMetrics -Enabled $true `
-    -WorkspaceId ($workSpace.ResourceId) | Out-Null
+    New-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -Log $log -Metric $metric -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
 Write-Host ($writeEmptyLine + "# Bastion host $bastionName diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
@@ -460,4 +464,4 @@ Write-Host ($writeEmptyLine + "# Resource group $rgNameBastion locked" + $writeS
 Write-Host ($writeEmptyLine + "# Script completed" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor1 $writeEmptyLine 
 
-## --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
