@@ -89,9 +89,6 @@ $pipTierBastion = "Regional"
 $pipIpAddressVersionBastion = "IPv4"
 $pipBastionDiagnosticsName = #<your PIP Bastion Diagnostics settings name here> The name of the PIP diagnostic settings for Bastion. Example: "diag-pip-bas-hub-myh-01"
 
-$log = @()
-$metric = @()
-
 $tagSpokeName = #<your environment tag name here> The environment tag name you want to use. Example:"Env"
 $tagSpokeValue = "$($spoke[0].ToString().ToUpper())$($spoke.SubString(1))"
 $tagCostCenterName  = #<your costCenter tag name here> The costCenter tag name you want to use. Example:"CostCenter"
@@ -116,7 +113,8 @@ $writeSeperatorSpaces = " - "
 
 ## Remove the breaking change warning messages
 
-Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
+Set-Item -Path Env:\SuppressAzurePowerShellBreakingChangeWarnings -Value $true | Out-Null
+Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -152,7 +150,8 @@ if ($null -eq $bastionObject){
 
 ## Change the current context to use a management subscription
 
-$subNameManagement = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
+# Replace <your subscription purpose name here> with purpose name of your subscription. Example: "*management*"
+$subNameManagement = Get-AzSubscription | Where-Object {$_.Name -like "<your subscription purpose name here>"}
 
 Set-AzContext -SubscriptionId $subNameManagement.SubscriptionId | Out-Null 
 
@@ -336,12 +335,15 @@ Write-Host ($writeEmptyLine + "# NSG $nsgNameBastion available" + $writeSeperato
 -foregroundcolor $foregroundColor2 $writeEmptyLine
 
 # Set the log settings for the NSG if they don't exist
-$log += New-AzDiagnosticSettingLogSettingsObject -CategoryGroup allLogs -Enabled $true | Out-Null
+
+$nsgLog = @()
+$nsgLog += New-AzDiagnosticSettingLogSettingsObject -Enabled $true -CategoryGroup "allLogs"
 
 try {
     Get-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -ErrorAction Stop | Out-Null
-} catch { 
-    New-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -Log $log -WorkspaceId ($workSpace.ResourceId) | Out-Null
+} catch {   
+    New-AzDiagnosticSetting -Name $nsgBastionDiagnosticsName -ResourceId ($nsg.Id) -Log $nsgLog `
+    -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
 # Create the AzureBastionSubnet if it does not exist
@@ -350,7 +352,7 @@ try {
 
     $subnet = Get-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet -ErrorAction Stop | Out-Null 
 } catch {
-    $subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet -AddressPrefix $subnetAddressBastion
+    $subnet = Add-AzVirtualNetworkSubnetConfig -Name $subnetNameBastion -VirtualNetwork $vnet -AddressPrefix $subnetAddressBastion | Out-Null
 
     $vnet | Set-AzVirtualNetwork | Out-Null 
 }
@@ -381,11 +383,17 @@ $pipBastion.Tag = $tagsBastion
 Set-AzPublicIpAddress -PublicIpAddress $pipBastion | Out-Null
 
 # Set the log and metrics settings for the PIP, if they don't exist
+
+$pipLog = @()
+$pipLog += New-AzDiagnosticSettingLogSettingsObject -Enabled $true -CategoryGroup "allLogs"
+$pipMetric = @()
+$pipMetric += New-AzDiagnosticSettingMetricSettingsObject -Enabled $true -Category "AllMetrics"
+
 try {
     Get-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -ErrorAction Stop | Out-Null
 } catch {   
-    New-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -Category DDoSProtectionNotifications,DDoSMitigationFlowLogs,DDoSMitigationReports `
-    -MetricCategory AllMetrics -Enabled $true -WorkspaceId ($workSpace.ResourceId) | Out-Null
+    New-AzDiagnosticSetting -Name $pipBastionDiagnosticsName -ResourceId ($pipBastion.Id) -Log $pipLog `
+    -Metric $pipMetric -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
 Write-Host ($writeEmptyLine + "# Pip " + $pipNameBastion + " available and diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
@@ -398,10 +406,14 @@ Write-Host ($writeEmptyLine + "# Pip " + $pipNameBastion + " available and diagn
 $networkWatcher = Get-AzNetworkWatcher -Name $networkWatcherName -ResourceGroupName $rgNameNetworkWatcher
 $storageAccount = Get-AzStorageAccount -ResourceGroupName $rgNameStorage -Name $storageAccountName
 
-# Configure Flow log and Traffic Analytics
-Set-AzNetworkWatcherFlowLog -Name ($nsg.Name + "-flow-log") -NetworkWatcher $networkWatcher -TargetResourceId $nsg.Id -StorageId $storageAccount.Id -Enabled $true -FormatType Json `
--FormatVersion 2 -EnableTrafficAnalytics -TrafficAnalyticsWorkspaceId ($workSpace.ResourceId) -TrafficAnalyticsInterval $trafficAnalyticsInterval -EnableRetention $true `
--RetentionPolicyDays $nsgFlowLogsRetention -Tag $tagsBastion -Force | Out-Null
+try {
+    Get-AzNetworkWatcherFlowLog -Name ($nsg.Name + "-flow-log") -NetworkWatcher $networkWatcher -TargetResourceId $nsg.Id -ErrorAction Stop | Out-Null 
+} catch {
+    # Configure Flow log and Traffic Analytics
+    Set-AzNetworkWatcherFlowLog -Name ($nsg.Name + "-flow-log") -NetworkWatcher $networkWatcher -TargetResourceId $nsg.Id -StorageId $storageAccount.Id -Enabled $true -FormatType Json `
+    -FormatVersion 2 -EnableTrafficAnalytics -TrafficAnalyticsWorkspaceId ($workSpace.ResourceId) -TrafficAnalyticsInterval $trafficAnalyticsInterval -EnableRetention $true `
+    -RetentionPolicyDays $nsgFlowLogsRetention -Tag $tagsBastion -Force | Out-Null
+}
 
 Write-Host ($writeEmptyLine + "# NSG FLow logs and Traffic Analytics for $($nsg.Name) enabled" + $writeSeperatorSpaces + $currentTime) -foregroundcolor $foregroundColor2 $writeEmptyLine
 
@@ -433,12 +445,16 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName available" + $writeSe
 
 ## Set the log and metrics settings for the bastion resource if they don't exist
 
-$metric += New-AzDiagnosticSettingMetricSettingsObject -Category AllMetrics -Enabled $true | Out-Null
+$bastionLog = @()
+$bastionLog += New-AzDiagnosticSettingLogSettingsObject -Enabled $true -CategoryGroup "allLogs"
+$bastionMetric = @()
+$bastionMetric += New-AzDiagnosticSettingMetricSettingsObject -Enabled $true -Category "AllMetrics"
 
 try {
     Get-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -ErrorAction Stop | Out-Null
-} catch {    
-    New-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -Log $log -Metric $metric -WorkspaceId ($workSpace.ResourceId) | Out-Null
+} catch {   
+    New-AzDiagnosticSetting -Name $bastionDiagnosticsName -ResourceId ($bastion.Id) -Log $bastionLog `
+    -Metric $bastionMetric -WorkspaceId ($workSpace.ResourceId) | Out-Null
 }
 
 Write-Host ($writeEmptyLine + "# Bastion host $bastionName diagnostic settings set" + $writeSeperatorSpaces + $currentTime)`
