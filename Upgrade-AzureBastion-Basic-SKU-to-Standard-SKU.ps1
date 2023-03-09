@@ -145,6 +145,9 @@ Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writ
 
 $bastionName = $bastionObject.Name
 
+Write-Host ($writeEmptyLine + "# Upgrading bastion host $bastionName to the $bastionSkuStandard SKU, which can take up to 6 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor1 $writeEmptyLine
+
 # Upgrade Bastion host to Standard SKU and 2 Scale Units
 Set-AzBastion -InputObject $bastionObject -Sku $bastionSkuStandard -ScaleUnit $bastionScaleUnit -Force | Out-Null
 
