@@ -92,7 +92,7 @@ try {
     if ($null -ne (az version)) {
         Write-Host ($writeEmptyLine + "# If needed, the Azure CLI will be updated to the latest version, which can take a few minutes to complete" + $writeSeperatorSpaces + $currentTime)`
         -foregroundcolor $foregroundColor2 $writeEmptyLine
-        az upgrade --yes 2>nul
+        & az upgrade --yes 2>$null
     }
 } catch {
     if ($error[0].ToString() -match "The term 'az' is not recognized as a name of a cmdlet") {
