@@ -14,9 +14,9 @@ Check if Azure CLI is already installed and, if required, update it to the lates
 Change the current context to the subscription holding the Azure Bastion host.
 Save the Bastion host as a variable and check if it uses the Standard SKU; otherwise, exit the script.
 Update the Bastion host to enable native client support, if not already enabled.
+Install the ssh extension.
 Validate if the target VM exists, and if so, find the subscription it belongs to; otherwise, exit the script.
-RDP to the target VM using the native client through Azure Bastion.
-Remote Desktop File conn.rdp will be removed when the RDP connection is terminated.
+SSH to the target VM using the native client through Azure Bastion.
 
 .NOTES
 
@@ -65,6 +65,7 @@ param(
 $allSubscriptions = Get-AzSubscription | Where-Object { "Enabled" -eq $_.State}
 $subscriptionNameVM = ""
 $vmObject = $null
+$rdpFileName = "conn.rdp"
 
 $global:currenttime= Set-PSBreakpoint -Variable currenttime -Mode Read -Action {$global:currenttime= Get-Date -UFormat "%A %m/%d/%Y %R"}
 $foregroundColor1 = "Green"
@@ -119,6 +120,7 @@ Finally {
 
 ## Change the current context to the subscription holding the Azure Bastion host
 
+# Replace <your subscription purpose name here> with purpose name of your subscription. Example: "*management*"
 $subcriptionNameBastion = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
 
 Set-AzContext -SubscriptionId $subcriptionNameBastion.SubscriptionId | Out-Null 
@@ -163,7 +165,7 @@ Write-Host ($writeEmptyLine + "# Bastion host has native client support enabled"
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-## Install ssh extension
+## Install the ssh extension
 
 az extension add --name ssh --output none --only-show-errors
 
