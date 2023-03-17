@@ -65,7 +65,6 @@ param(
 $allSubscriptions = Get-AzSubscription | Where-Object { "Enabled" -eq $_.State}
 $subscriptionNameVM = ""
 $vmObject = $null
-$rdpFileName = "conn.rdp"
 
 $global:currenttime= Set-PSBreakpoint -Variable currenttime -Mode Read -Action {$global:currenttime= Get-Date -UFormat "%A %m/%d/%Y %R"}
 $foregroundColor1 = "Green"
