@@ -20,6 +20,10 @@ Currenently this repository holds the following scritps:
   - **Switch-AzureBastion-Standard-SKU-to-Basic-SKU.ps1**
  
     More information about the script used to switch a bastion host from the Standard to the Basic SKU can be found on my blog: https://wmatthyssen.com/2022/10/05/azure-bastion-switch-standard-sku-to-basic-sku-with-azure-powershell/ 
+    
+  - **Create-Azure-Bastion-shareable-link.ps1**
+ 
+    More information about the script used to o create an Azure Bastion shareable link for a specific VM can be found on my blog: https://wmatthyssen.com/2023/01/11/azure-bastion-connect-to-an-azure-vm-without-accessing-the-azure-portal-by-using-a-shareable-link/
 
   - **Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1**
  
@@ -28,3 +32,5 @@ Currenently this repository holds the following scritps:
   - **Connect-SSH-Azure-Linux-VM-using-native-client-via-Azure-Bastion.ps1**
  
     More information about the script used to connect to an Azure Linux VM using a native client on your local computer through Azure Bastion can be found on my blog: https://wmatthyssen.com/2023/03/09/connecting-to-an-azure-linux-vm-using-an-azure-powershell-script-and-native-client-via-azure-bastion/
+    
+
