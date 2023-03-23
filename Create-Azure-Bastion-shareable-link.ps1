@@ -163,7 +163,7 @@ $body = @{vms = @(@{vm = @{id = $(($vmObject).Id) }})} | ConvertTo-Json -Depth 1
 # Send an HTTP or HTTPS request to a REST API endpoint
 Invoke-WebRequest -Uri $uri -Authentication $authenticationType -Token $token -Method $method -Body $body -ContentType $contentType | Out-Null
 
-# Wait for the link to be created. This is to avoid the error "The link is not ready yet. Please try again later."
+# Wait for the link to be created, to avoid errors
 Write-Host ($writeEmptyLine + "# Waiting for the shareable link for VM $vmName to be created" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine 
 
