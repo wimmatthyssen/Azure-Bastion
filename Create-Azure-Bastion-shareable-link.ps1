@@ -12,7 +12,7 @@ The script will do all of the following:
 Remove the breaking change warning messages.
 Validate if the target VM exists, and if so, find the subscription it belongs to; otherwise, exit the script.
 Validate if an Azure Bastion host exists, and if so, save the Bastion host as a variable if it uses the Standard SKU; otherwise, exit the script.
-Create and get the shareable link for the VM using the REST API.
+Create the shareable link for the VM using the REST API.
 Get the shareable link for the VM using the REST API.
 
 .NOTES
