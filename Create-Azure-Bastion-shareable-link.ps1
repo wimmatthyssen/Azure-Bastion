@@ -24,8 +24,6 @@ Author:         Wim Matthyssen
 Version:        1.0
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
-CLI:            Azure CLI
-Requires:       azure-cli 2.45.0
 Action:         Change variables as needed to fit your needs.
 Disclaimer:     This script is provided "as is" with no warranties.
 
