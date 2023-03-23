@@ -19,9 +19,9 @@ Get the shareable link for the VM using the REST API.
 
 Filename:       Create-Azure-Bastion-shareable-link.ps1
 Created:        20/01/2023
-Last modified:  20/01/2023
+Last modified:  23/03/2023
 Author:         Wim Matthyssen
-Version:        1.0
+Version:        2.0
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
 Action:         Change variables as needed to fit your needs.
