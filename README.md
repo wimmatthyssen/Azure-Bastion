@@ -23,7 +23,7 @@ Currenently this repository holds the following scritps:
     
   - **Create-Azure-Bastion-shareable-link.ps1**
  
-    More information about the script used to o create an Azure Bastion shareable link for a specific VM can be found on my blog: https://wmatthyssen.com/2023/01/11/azure-bastion-connect-to-an-azure-vm-without-accessing-the-azure-portal-by-using-a-shareable-link/
+    More information about the script used to create an Azure Bastion shareable link for a specific VM can be found on my blog: https://wmatthyssen.com/2023/01/11/azure-bastion-connect-to-an-azure-vm-without-accessing-the-azure-portal-by-using-a-shareable-link/
 
   - **Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1**
  
