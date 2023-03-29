@@ -75,7 +75,8 @@ $writeSeperatorSpaces = " - "
 
 ## Remove the breaking change warning messages
 
-Set-Item Env:\SuppressAzurePowerShellBreakingChangeWarnings "true"
+Set-Item -Path Env:\SuppressAzurePowerShellBreakingChangeWarnings -Value $true | Out-Null
+Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
