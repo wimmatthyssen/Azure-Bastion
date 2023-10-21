@@ -184,7 +184,7 @@ Write-Host ($writeEmptyLine + "# Bastion host $bastionName temporarily removed" 
 
 $pipNameBastion = Get-AzPublicIpAddress -ResourceGroupName $bastion.ResourceGroupName
 $vnetName = Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.Name}}
-$rgNameNetworking = Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.ResourceGroupName }}
+$rgNameNetworking = (Get-AzVirtualNetwork | ForEach-Object {if($_.Subnets.Name.Contains("AzureBastionSubnet")){return $_.ResourceGroupName }}).Name
 
 Write-Host ($writeEmptyLine + "# Redeploy bastion host $bastionName with $bastionSkuBasic SKU, which can take up to 10 minutes to complete" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor1 $writeEmptyLine
