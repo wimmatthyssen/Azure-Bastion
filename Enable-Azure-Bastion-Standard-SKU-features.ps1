@@ -141,7 +141,7 @@ if ($null -eq $bastionObject){
 ## Store the current set of Azure Bastion host tags in a hash table
 
 $bastionResourceGroupName = $bastionObject.ResourceGroupName
-$bastionTags = (Get-AzResource -ResourceGroupName $bastionResourceGroupName -ResourceName $bastion.Name).Tags
+$bastionTags = (Get-AzResource -ResourceGroupName $bastionResourceGroupName -ResourceName $bastionName).Tags
 
 Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine 
@@ -187,7 +187,7 @@ Write-Host ($writeEmptyLine + "# The Azure Bastion Standard SKU features are ena
 
 # Set stored tags on the Azure Bastion host
 
-Set-AzBastion -InputObject $bastion -Tag $bastionTags -Force | Out-Null
+Set-AzBastion -InputObject $bastionObject -Tag $bastionTags -Force | Out-Null
 
 Write-Host ($writeEmptyLine + "# Azure resource tags re-applied on the Azure Bastion host" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine 
