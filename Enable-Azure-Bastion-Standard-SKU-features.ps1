@@ -13,7 +13,9 @@ The script will do all of the following:
 Remove the breaking change warning messages.
 Change the current context to the subscription holding the Azure Bastion host, if the subscription exists; otherwise, exit the script.
 Save the Bastion host as a variable if it exists in the subscription and uses the Standard SKU; otherwise, exit the script.
+Store the current set of Azure Bastion host tags in a hash table.
 Enable the Azure Bastion Standard SKU features using the REST API.
+Set stored tags on the Azure Bastion host.
 
 .NOTES
 
@@ -136,6 +138,15 @@ if ($null -eq $bastionObject){
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+## Store the current set of Azure Bastion host tags in a hash table
+
+$bastionTags = (Get-AzResource -ResourceGroupName $rgNameBastion -ResourceName $bastion.Name).Tags
+
+Write-Host ($writeEmptyLine + "# Specified set of tags available to add" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine 
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 ## Enable the Azure Bastion Standard SKU features using the REST API
 
 # Get subscription ID
@@ -170,6 +181,15 @@ $body = @{
 Invoke-WebRequest -Uri $uri -Authentication $authenticationType -Token $token -Method $method -Body $body -ContentType $contentType | Out-Null
 
 Write-Host ($writeEmptyLine + "# The Azure Bastion Standard SKU features are enabled for bastion host $bastionName" + $writeSeperatorSpaces + $currentTime)`
+-foregroundcolor $foregroundColor2 $writeEmptyLine 
+
+## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Set stored tags on the Azure Bastion host
+
+Set-AzBastion -InputObject $bastion -Tag $bastionTags -Force | Out-Null
+
+Write-Host ($writeEmptyLine + "# Azure resource tags re-applied on the Azure Bastion host" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine 
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
