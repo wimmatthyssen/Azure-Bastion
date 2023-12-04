@@ -32,5 +32,9 @@ Currenently this repository holds the following scritps:
   - **Connect-SSH-Azure-Linux-VM-using-native-client-via-Azure-Bastion.ps1**
  
     More information about the script used to connect to an Azure Linux VM using a native client on your local computer through Azure Bastion can be found on my blog: https://wmatthyssen.com/2023/03/09/connecting-to-an-azure-linux-vm-using-an-azure-powershell-script-and-native-client-via-azure-bastion/
+
+  - **Enable-Azure-Bastion-Standard-SKU-features.ps1**
+ 
+    More information about the script used to enable all Azure Bastion Standard SKU features with Azure PowerShell and with the REST API can be found on my blog: https://wmatthyssen.com/2023/12/04/azure-bastion-enable-azure-bastion-standard-sku-features-with-azure-powershell/
     
 
