@@ -22,9 +22,9 @@ SSH to the target VM using the native client through Azure Bastion.
 
 Filename:       Connect-SSH-Azure-Linux-VM-using-native-client-via-Azure-Bastion.ps1
 Created:        07/03/2023
-Last modified:  07/03/2023
+Last modified:  04/12/2023
 Author:         Wim Matthyssen
-Version:        2.3
+Version:        2.4
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
 CLI:            Azure CLI
@@ -123,7 +123,8 @@ Finally {
 # Replace <your subscription purpose name here> with purpose name of your subscription. Example: "*management*"
 $subcriptionNameBastion = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
 
-Set-AzContext -SubscriptionId $subcriptionNameBastion.SubscriptionId | Out-Null 
+Set-AzContext -SubscriptionId $subcriptionNameBastion.SubscriptionId | Out-Null
+az account set --subscription $subcriptionNameBastion.Name
 
 Write-Host ($writeEmptyLine + "# Bastion host subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
