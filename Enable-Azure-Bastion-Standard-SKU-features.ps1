@@ -40,7 +40,7 @@ Set-AzContext -tenantID "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx" (if not using the defa
 
 .LINK
 
-
+https://wmatthyssen.com/2023/12/04/azure-bastion-enable-azure-bastion-standard-sku-features-with-azure-powershell/
 #>
 
 ## ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
