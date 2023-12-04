@@ -121,7 +121,8 @@ Finally {
 # Replace <your subscription purpose name here> with purpose name of your subscription. Example: "*management*"
 $subcriptionNameBastion = Get-AzSubscription | Where-Object {$_.Name -like "*management*"}
 
-Set-AzContext -SubscriptionId $subcriptionNameBastion.SubscriptionId | Out-Null 
+Set-AzContext -SubscriptionId $subcriptionNameBastion.SubscriptionId | Out-Null
+az account set --subscription $subcriptionNameBastion.Name
 
 Write-Host ($writeEmptyLine + "# Bastion host subscription in current tenant selected" + $writeSeperatorSpaces + $currentTime)`
 -foregroundcolor $foregroundColor2 $writeEmptyLine
