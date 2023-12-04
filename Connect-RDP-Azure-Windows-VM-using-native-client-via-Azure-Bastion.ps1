@@ -22,9 +22,9 @@ Remote Desktop File conn.rdp will be removed when the RDP connection is terminat
 
 Filename:       Connect-RDP-Azure-Windows-VM-using-native-client-via-Azure-Bastion.ps1
 Created:        26/02/2023
-Last modified:  06/03/2023
+Last modified:  04/12/2023
 Author:         Wim Matthyssen
-Version:        2.3
+Version:        2.4
 PowerShell:     Azure PowerShell
 Requires:       PowerShell Az (v9.3.0)
 CLI:            Azure CLI
