@@ -37,4 +37,6 @@ Currenently this repository holds the following scritps:
  
     More information about the script used to enable all Azure Bastion Standard SKU features with Azure PowerShell and with the REST API can be found on my blog: https://wmatthyssen.com/2023/12/04/azure-bastion-enable-azure-bastion-standard-sku-features-with-azure-powershell/
     
-
+  - **Create-and-Attach-AzureBastion-private-only-NSG.ps1**
+ 
+    More information about the script used to create and attach an NSG to the AzureBastionSubnet for an Azure Bastion private-only deployment (Public Preview) in a management subscription can be found on my blog: https://wmatthyssen.com/2024/06/11/azure-bastion-solving-vm-connection-problems-caused-by-nsg-on-azurebastionsubnet-when-using-the-azure-bastion-premium-sku/
