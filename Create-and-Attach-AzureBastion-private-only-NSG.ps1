@@ -37,7 +37,7 @@ Set-AzContext -tenantID "xxxxxxxx-xxxx-xxxx-xxxxxxxxxxxx" (if not using the defa
 .\Create-and-Attach-AzureBastion-private-only-NSG.ps1
 
 .LINK
-
+https://wmatthyssen.com/2024/06/11/azure-bastion-solving-vm-connection-problems-caused-by-nsg-on-azurebastionsubnet-when-using-the-azure-bastion-premium-sku/
 
 #>
 
